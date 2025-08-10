@@ -267,6 +267,9 @@ type Config struct {
 	resolver       VariableResolver
 	dataConfigDir  string             `json:"-"`
 	knownProviders []catwalk.Provider `json:"-"`
+
+    // Lash-specific extensions (optional, namespaced under "lash" in JSON)
+    Lash *LashOptions `json:"lash,omitempty"`
 }
 
 func (c *Config) WorkingDir() string {

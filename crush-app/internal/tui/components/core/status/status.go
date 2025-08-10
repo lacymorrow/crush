@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/v2/help"
+	"github.com/charmbracelet/bubbles/v2/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/crush/internal/tui/styles"
 	"github.com/charmbracelet/crush/internal/tui/util"
@@ -15,6 +16,7 @@ type StatusCmp interface {
 	util.Model
 	ToggleFullHelp()
 	SetKeyMap(keyMap help.KeyMap)
+	SetMode(mode string)
 }
 
 type statusCmp struct {
@@ -23,6 +25,7 @@ type statusCmp struct {
 	messageTTL time.Duration
 	help       help.Model
 	keyMap     help.KeyMap
+	mode       string
 }
 
 // clearMessageCmd is a command that clears status messages after a timeout
@@ -59,7 +62,9 @@ func (m *statusCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *statusCmp) View() string {
 	t := styles.CurrentTheme()
-	status := t.S().Base.Padding(0, 1, 1, 1).Render(m.help.View(m.keyMap))
+	left := t.S().Base.Padding(0, 1).Render("Mode: " + m.mode + "  Press Ctrl\\ or x to toggle modes")
+	right := m.help.View(m.keyMap)
+	status := t.S().Base.Padding(0, 1, 1, 1).Render(left + "  " + right)
 	if m.info.Msg != "" {
 		status = m.infoMsg()
 	}
@@ -98,6 +103,10 @@ func (m *statusCmp) SetKeyMap(keyMap help.KeyMap) {
 	m.keyMap = keyMap
 }
 
+func (m *statusCmp) SetMode(mode string) {
+	m.mode = mode
+}
+
 func NewStatusCmp() StatusCmp {
 	t := styles.CurrentTheme()
 	help := help.New()
@@ -105,5 +114,14 @@ func NewStatusCmp() StatusCmp {
 	return &statusCmp{
 		messageTTL: 5 * time.Second,
 		help:       help,
+		mode:       "Shell",
+		keyMap:     emptyHelp{},
 	}
 }
+
+// emptyHelp provides a safe default help.KeyMap implementation
+// to avoid panics when no page-specific keymap is set yet.
+type emptyHelp struct{}
+
+func (emptyHelp) ShortHelp() []key.Binding  { return nil }
+func (emptyHelp) FullHelp() [][]key.Binding { return nil }

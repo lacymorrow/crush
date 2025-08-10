@@ -6,3 +6,8 @@ type PageID string
 type PageChangeMsg struct {
 	ID PageID
 }
+
+const (
+    ChatPageID  PageID = "chat"
+    ShellPageID PageID = "shell"
+)

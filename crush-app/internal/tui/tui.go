@@ -29,6 +29,7 @@ import (
 	"github.com/charmbracelet/crush/internal/tui/components/dialogs/sessions"
 	"github.com/charmbracelet/crush/internal/tui/page"
 	"github.com/charmbracelet/crush/internal/tui/page/chat"
+	pageShell "github.com/charmbracelet/crush/internal/tui/page/shell"
 	"github.com/charmbracelet/crush/internal/tui/styles"
 	"github.com/charmbracelet/crush/internal/tui/util"
 	"github.com/charmbracelet/lipgloss/v2"
@@ -403,6 +404,31 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 			return util.ReportWarn("Agent is busy, please wait...")
 		}
 		return tea.Suspend
+	// Mode switching (Lash additions)
+	case key.Matches(msg, a.keyMap.ModeShell):
+		a.status.SetMode("Shell")
+		return a.moveToPage(page.ShellPageID)
+	case key.Matches(msg, a.keyMap.ModeAgent):
+		a.status.SetMode("Agent")
+		return a.moveToPage(chat.ChatPageID)
+	case key.Matches(msg, a.keyMap.ModeAuto):
+		a.status.SetMode("Auto")
+		// Auto routes to chat for now; routing logic to be added later
+		return a.moveToPage(chat.ChatPageID)
+	case key.Matches(msg, a.keyMap.ModeToggle):
+		if a.currentPage == page.ShellPageID {
+			a.status.SetMode("Agent")
+			return a.moveToPage(chat.ChatPageID)
+		}
+		a.status.SetMode("Shell")
+		return a.moveToPage(page.ShellPageID)
+	case key.Matches(msg, a.keyMap.ModeToggleAlt):
+		if a.currentPage == page.ShellPageID {
+			a.status.SetMode("Agent")
+			return a.moveToPage(chat.ChatPageID)
+		}
+		a.status.SetMode("Shell")
+		return a.moveToPage(page.ShellPageID)
 	default:
 		if a.dialog.HasDialogs() {
 			u, dialogCmd := a.dialog.Update(msg)
@@ -521,22 +547,51 @@ func (a *appModel) View() tea.View {
 // New creates and initializes a new TUI application model.
 func New(app *app.App) tea.Model {
 	chatPage := chat.New(app)
+	shellPage := pageShell.New(app)
+	// Placeholder: Shell page to be added; default to chat until shell page exists
 	keyMap := DefaultKeyMap()
 	keyMap.pageBindings = chatPage.Bindings()
 
 	model := &appModel{
-		currentPage: chat.ChatPageID,
+		// Start mode based on config
+		currentPage: func() page.PageID {
+			switch strings.ToLower(config.Get().GetLash().DefaultMode) {
+			case "agent":
+				return chat.ChatPageID
+			case "auto":
+				return chat.ChatPageID // will route on submit in future work
+			default:
+				return page.ShellPageID
+			}
+		}(),
 		app:         app,
 		status:      status.NewStatusCmp(),
 		loadedPages: make(map[page.PageID]bool),
 		keyMap:      keyMap,
 
 		pages: map[page.PageID]util.Model{
-			chat.ChatPageID: chatPage,
+			page.ShellPageID: shellPage,
+			chat.ChatPageID:  chatPage,
 		},
 
 		dialog:      dialogs.NewDialogCmp(),
 		completions: completions.New(),
+	}
+
+	// Sync status mode label with initial currentPage
+	switch model.currentPage {
+	case page.ShellPageID:
+		model.status.SetMode("Shell")
+		// set prompt for shell page
+		shellPage.SetPrompt("shell")
+	case chat.ChatPageID:
+		// Determine if started in Agent or Auto for label
+		switch strings.ToLower(config.Get().GetLash().DefaultMode) {
+		case "auto":
+			model.status.SetMode("Auto")
+		default:
+			model.status.SetMode("Agent")
+		}
 	}
 
 	return model
