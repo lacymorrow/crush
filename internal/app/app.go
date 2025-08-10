@@ -51,6 +51,9 @@ type App struct {
 	// global context and cleanup functions
 	globalCtx    context.Context
 	cleanupFuncs []func()
+
+	// UI Mode: "Shell", "Agent", or "Auto"
+	Mode string
 }
 
 // New initializes a new applcation instance.
@@ -87,6 +90,8 @@ func New(ctx context.Context, conn *sql.DB, cfg *config.Config) (*App, error) {
 		events:          make(chan tea.Msg, 100),
 		serviceEventsWG: &sync.WaitGroup{},
 		tuiWG:           &sync.WaitGroup{},
+
+		Mode: "Shell",
 	}
 
 	app.setupEvents()

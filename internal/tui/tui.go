@@ -72,7 +72,13 @@ type appModel struct {
 
 	// Chat Page Specific
 	selectedSessionID string // The ID of the currently selected session
+
+	// Active mode state for status display
+	activeMode string
 }
+
+// ActiveMode returns the current mode string (Shell/Agent/Auto)
+func (a *appModel) ActiveMode() string { return a.activeMode }
 
 // Init initializes the application model and returns initial commands.
 func (a appModel) Init() tea.Cmd {
@@ -85,6 +91,9 @@ func (a appModel) Init() tea.Cmd {
 	cmds = append(cmds, cmd)
 
 	cmds = append(cmds, tea.EnableMouseAllMotion)
+
+	// Always show initial info on launch
+	a.status.SetLeft("Mode: " + a.activeMode)
 
 	return tea.Batch(cmds...)
 }
@@ -398,6 +407,19 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 			},
 		)
 		return tea.Sequence(cmds...)
+	case key.Matches(msg, a.keyMap.ToggleMode):
+		// Cycle through Shell -> Agent -> Auto -> Shell
+		switch a.activeMode {
+		case "Shell":
+			a.activeMode = "Agent"
+		case "Agent":
+			a.activeMode = "Auto"
+		default:
+			a.activeMode = "Shell"
+		}
+		a.status.SetLeft("Mode: " + a.activeMode)
+		a.app.Mode = a.activeMode
+		return a.handleWindowResize(a.wWidth, a.wHeight)
 	case key.Matches(msg, a.keyMap.Suspend):
 		if a.app.CoderAgent != nil && a.app.CoderAgent.IsBusy() {
 			return util.ReportWarn("Agent is busy, please wait...")
@@ -537,7 +559,11 @@ func New(app *app.App) tea.Model {
 
 		dialog:      dialogs.NewDialogCmp(),
 		completions: completions.New(),
+
+		activeMode: "Shell",
 	}
+	// Register a minimal accessor for other components
+	util.RegisterAppModel(model)
 
 	return model
 }

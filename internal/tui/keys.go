@@ -11,6 +11,9 @@ type KeyMap struct {
 	Suspend  key.Binding
 	Sessions key.Binding
 
+	// Modes
+	ToggleMode key.Binding
+
 	pageBindings []key.Binding
 }
 
@@ -35,6 +38,12 @@ func DefaultKeyMap() KeyMap {
 		Sessions: key.NewBinding(
 			key.WithKeys("ctrl+s"),
 			key.WithHelp("ctrl+s", "sessions"),
+		),
+
+		// Single toggle for modes
+		ToggleMode: key.NewBinding(
+			key.WithKeys("ctrl+space"),
+			key.WithHelp("ctrl+space", "mode"),
 		),
 	}
 }

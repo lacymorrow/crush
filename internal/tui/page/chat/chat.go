@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/crush/internal/permission"
 	"github.com/charmbracelet/crush/internal/pubsub"
 	"github.com/charmbracelet/crush/internal/session"
+	"github.com/charmbracelet/crush/internal/shell"
 	"github.com/charmbracelet/crush/internal/tui/components/anim"
 	"github.com/charmbracelet/crush/internal/tui/components/chat"
 	"github.com/charmbracelet/crush/internal/tui/components/chat/editor"
@@ -683,6 +684,39 @@ func (p *chatPage) sendMessage(text string, attachments []message.Attachment) te
 		session = newSession
 		cmds = append(cmds, util.CmdHandler(chat.SessionSelectedMsg(session)))
 	}
+	// If active mode is Shell, bypass AI and execute in persistent shell, then append output as assistant message.
+	if m, ok := util.TryGetAppModel(); ok && m.ActiveMode() == "Shell" {
+		sh := shell.GetPersistentShell(p.app.Config().WorkingDir())
+		stdout, stderr, err := sh.Exec(context.Background(), text)
+		if err != nil {
+			// include exit info in output
+			if stderr == "" {
+				stderr = err.Error()
+			} else {
+				stderr += "\n" + err.Error()
+			}
+		}
+		// Save user command
+		_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
+			Role:  message.User,
+			Parts: []message.ContentPart{message.TextContent{Text: text}},
+		})
+		// Save assistant output (stdout and/or stderr)
+		combined := stdout
+		if combined != "" && stderr != "" {
+			combined += "\n"
+		}
+		combined += stderr
+		if combined == "" {
+			combined = ""
+		}
+		_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
+			Role:  message.Assistant,
+			Parts: []message.ContentPart{message.TextContent{Text: combined}},
+		})
+		cmds = append(cmds, p.chat.GoToBottom())
+		return tea.Batch(cmds...)
+	}
 	_, err := p.app.CoderAgent.Run(context.Background(), session.ID, text, attachments...)
 	if err != nil {
 		return util.ReportError(err)
@@ -747,11 +781,6 @@ func (p *chatPage) Help() help.KeyMap {
 				key.WithKeys("enter", "ctrl+y"),
 				key.WithHelp("enter", "accept"),
 			),
-			// Quit
-			key.NewBinding(
-				key.WithKeys("ctrl+c"),
-				key.WithHelp("ctrl+c", "quit"),
-			),
 		)
 		// keep them the same
 		for _, v := range shortList {
@@ -774,28 +803,12 @@ func (p *chatPage) Help() help.KeyMap {
 				),
 			)
 		}
-		shortList = append(shortList,
-			// Quit
-			key.NewBinding(
-				key.WithKeys("ctrl+c"),
-				key.WithHelp("ctrl+c", "quit"),
-			),
-		)
 		// keep them the same
 		for _, v := range shortList {
 			fullList = append(fullList, []key.Binding{v})
 		}
 	case p.isProjectInit:
-		shortList = append(shortList,
-			key.NewBinding(
-				key.WithKeys("ctrl+c"),
-				key.WithHelp("ctrl+c", "quit"),
-			),
-		)
-		// keep them the same
-		for _, v := range shortList {
-			fullList = append(fullList, []key.Binding{v})
-		}
+		// no short help additions during project init
 	default:
 		if p.editor.IsCompletionsOpen() {
 			shortList = append(shortList,
@@ -932,15 +945,9 @@ func (p *chatPage) Help() help.KeyMap {
 			)
 		case PanelTypeEditor:
 			newLineBinding := key.NewBinding(
-				key.WithKeys("shift+enter", "ctrl+j"),
-				// "ctrl+j" is a common keybinding for newline in many editors. If
-				// the terminal supports "shift+enter", we substitute the help text
-				// to reflect that.
+				key.WithKeys("ctrl+j"),
 				key.WithHelp("ctrl+j", "newline"),
 			)
-			if p.keyboardEnhancements.SupportsKeyDisambiguation() {
-				newLineBinding.SetHelp("shift+enter", newLineBinding.Help().Desc)
-			}
 			shortList = append(shortList, newLineBinding)
 			fullList = append(fullList,
 				[]key.Binding{
@@ -977,11 +984,6 @@ func (p *chatPage) Help() help.KeyMap {
 			}
 		}
 		shortList = append(shortList,
-			// Quit
-			key.NewBinding(
-				key.WithKeys("ctrl+c"),
-				key.WithHelp("ctrl+c", "quit"),
-			),
 			// Help
 			helpBinding,
 		)
@@ -991,6 +993,11 @@ func (p *chatPage) Help() help.KeyMap {
 				key.WithHelp("ctrl+g", "less"),
 			),
 		})
+
+		// Add compact mode toggles only (remove ctrl+c from short help to keep it concise)
+		shortList = append(shortList,
+			key.NewBinding(key.WithKeys("ctrl+space"), key.WithHelp("ctrl+space", "mode")),
+		)
 	}
 
 	return core.NewSimpleHelp(shortList, fullList)

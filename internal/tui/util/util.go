@@ -5,6 +5,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/charmbracelet/crush/internal/app"
 )
 
 type Cursor interface {
@@ -66,4 +67,32 @@ func Clamp(v, low, high int) int {
 		low, high = high, low
 	}
 	return min(high, max(low, v))
+}
+
+// AppModelAccessor exposes the active mode without importing UI internals
+type AppModelAccessor interface {
+	ActiveMode() string
+}
+
+var appModel AppModelAccessor
+
+// RegisterAppModel allows the TUI root to register a minimal accessor
+func RegisterAppModel(m AppModelAccessor) {
+	appModel = m
+}
+
+// TryGetAppModel returns the accessor if present
+func TryGetAppModel() (AppModelAccessor, bool) {
+	if appModel == nil {
+		return nil, false
+	}
+	return appModel, true
+}
+
+// ActiveModeFromApp returns current mode with fallback to app.App.Mode
+func ActiveModeFromApp(a *app.App) string {
+	if m, ok := TryGetAppModel(); ok {
+		return m.ActiveMode()
+	}
+	return a.Mode
 }
