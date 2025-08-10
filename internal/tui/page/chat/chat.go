@@ -2,6 +2,9 @@ package chat
 
 import (
 	"context"
+	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -113,6 +116,38 @@ type chatPage struct {
 	splashFullScreen bool
 	isOnboarding     bool
 	isProjectInit    bool
+}
+
+// shouldRouteToShell returns true if the input likely refers to a shell command.
+// Heuristics:
+// - Starts with common shell operators or shebang indicators
+// - First token resolves in PATH (exec.LookPath)
+// - First token looks like a path (./, ../, /)
+func shouldRouteToShell(input string) bool {
+	if input == "" {
+		return false
+	}
+	// Quick checks for shell-y constructs
+	shellyPrefixes := []string{"./", "../", "/", "sudo ", "echo ", "export ", "unset ", "set ", "cd ", "pwd", "cat ", "ls", "git ", "brew ", "npm ", "pnpm ", "yarn ", "go ", "make ", "cargo ", "pip ", "python ", "python3 ", "ruby ", "node ", "bash ", "sh ", "zsh "}
+	lowered := strings.ToLower(strings.TrimSpace(input))
+	for _, p := range shellyPrefixes {
+		if strings.HasPrefix(lowered, p) {
+			return true
+		}
+	}
+	// PATH resolution for first token
+	fields := strings.Fields(input)
+	if len(fields) == 0 {
+		return false
+	}
+	first := fields[0]
+	if strings.HasPrefix(first, "./") || strings.HasPrefix(first, "../") || strings.HasPrefix(first, "/") {
+		return true
+	}
+	if _, err := exec.LookPath(first); err == nil {
+		return true
+	}
+	return false
 }
 
 func New(app *app.App) ChatPage {
@@ -685,83 +720,136 @@ func (p *chatPage) sendMessage(text string, attachments []message.Attachment) te
 		session = newSession
 		cmds = append(cmds, util.CmdHandler(chat.SessionSelectedMsg(session)))
 	}
-	// If active mode is Shell, bypass AI and execute in persistent shell, then append output as assistant message.
+	// Determine active mode and route accordingly (Shell, Auto, Agent)
 	mode := p.app.Mode
 	if m, ok := util.TryGetAppModel(); ok {
 		mode = m.ActiveMode()
 	}
-	if mode == "Shell" {
+
+	switch mode {
+	case "Shell":
 		sh := shell.GetPersistentShell(p.app.Config().WorkingDir())
 		stdout, stderr, err := sh.Exec(context.Background(), text)
 		if err != nil {
-			// include exit info in output
 			if stderr == "" {
 				stderr = err.Error()
 			} else {
 				stderr += "\n" + err.Error()
 			}
-
-			// Auto mode: prefer Shell for obvious commands; fallback to Agent otherwise
-			if mode == "Auto" {
-				trimmed := strings.TrimSpace(text)
-				// Heuristics: looks like a command if it contains a space or a path/flag, or starts with ./, /, ~/, or a known exe-ish token
-				looksLikeCmd := strings.HasPrefix(trimmed, "./") || strings.HasPrefix(trimmed, "/") || strings.HasPrefix(trimmed, "~/") ||
-					strings.Contains(trimmed, " ") || strings.Contains(trimmed, "-")
-				if looksLikeCmd {
-					sh := shell.GetPersistentShell(p.app.Config().WorkingDir())
-					stdout, stderr, err := sh.Exec(context.Background(), text)
-					if err != nil {
-						if stderr == "" {
-							stderr = err.Error()
-						} else {
-							stderr += "\n" + err.Error()
-						}
-					}
-					_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
-						Role:  message.User,
-						Parts: []message.ContentPart{message.TextContent{Text: text}},
-					})
-					combined := stdout
-					if combined != "" && stderr != "" {
-						combined += "\n"
-					}
-					combined += stderr
-					_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
-						Role:  message.Assistant,
-						Parts: []message.ContentPart{message.TextContent{Text: combined}},
-					})
-					cmds = append(cmds, p.chat.GoToBottom())
-					return tea.Batch(cmds...)
-				}
-			}
 		}
-		// Save user command
 		_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
 			Role:  message.User,
 			Parts: []message.ContentPart{message.TextContent{Text: text}},
 		})
-		// Save assistant output (stdout and/or stderr)
 		combined := stdout
 		if combined != "" && stderr != "" {
 			combined += "\n"
 		}
 		combined += stderr
-		if combined == "" {
-			combined = ""
-		}
 		_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
 			Role:  message.Assistant,
 			Parts: []message.ContentPart{message.TextContent{Text: combined}},
 		})
 		cmds = append(cmds, p.chat.GoToBottom())
 		return tea.Batch(cmds...)
+
+	case "Auto":
+		// Router: explicit prefixes go to Agent, otherwise decide based on heuristics
+		trimmed := strings.TrimSpace(text)
+		routeToAgent := strings.HasPrefix(trimmed, "ai:") || strings.HasPrefix(trimmed, "?")
+		agentText := trimmed
+		if strings.HasPrefix(agentText, "ai:") {
+			agentText = strings.TrimSpace(strings.TrimPrefix(agentText, "ai:"))
+		} else if strings.HasPrefix(agentText, "?") {
+			agentText = strings.TrimSpace(strings.TrimPrefix(agentText, "?"))
+		}
+		if routeToAgent {
+			_, err := p.app.CoderAgent.Run(context.Background(), session.ID, agentText, attachments...)
+			if err != nil {
+				return util.ReportError(err)
+			}
+			cmds = append(cmds, p.chat.GoToBottom())
+			return tea.Batch(cmds...)
+		}
+
+		// If it looks like a shell command, attempt shell first
+		if shouldRouteToShell(trimmed) {
+			// Prefer persistent shell; if no output at all, try system shell; otherwise fall back to Agent
+			sh := shell.GetUserPersistentShell(p.app.Config().WorkingDir())
+			stdout, stderr, err := sh.Exec(context.Background(), text)
+			if stdout != "" || stderr != "" {
+				if err != nil {
+					if stderr == "" {
+						stderr = err.Error()
+					} else {
+						stderr += "\n" + err.Error()
+					}
+				}
+				_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
+					Role:  message.User,
+					Parts: []message.ContentPart{message.TextContent{Text: text}},
+				})
+				combined := stdout
+				if combined != "" && stderr != "" {
+					combined += "\n"
+				}
+				combined += stderr
+				_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
+					Role:  message.Assistant,
+					Parts: []message.ContentPart{message.TextContent{Text: combined}},
+				})
+				cmds = append(cmds, p.chat.GoToBottom())
+				return tea.Batch(cmds...)
+			}
+
+			// Try real system shell as a last attempt before agent
+			var sysOut []byte
+			var sysErr error
+			if runtime.GOOS == "windows" {
+				cmd := exec.Command("cmd", "/C", text)
+				cmd.Dir = p.app.Config().WorkingDir()
+				cmd.Env = os.Environ()
+				sysOut, sysErr = cmd.CombinedOutput()
+			} else {
+				cmd := exec.Command("sh", "-lc", text)
+				cmd.Dir = p.app.Config().WorkingDir()
+				cmd.Env = os.Environ()
+				sysOut, sysErr = cmd.CombinedOutput()
+			}
+			if len(sysOut) > 0 {
+				_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
+					Role:  message.User,
+					Parts: []message.ContentPart{message.TextContent{Text: text}},
+				})
+				outStr := string(sysOut)
+				if sysErr != nil {
+					outStr += "\n" + sysErr.Error()
+				}
+				_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
+					Role:  message.Assistant,
+					Parts: []message.ContentPart{message.TextContent{Text: outStr}},
+				})
+				cmds = append(cmds, p.chat.GoToBottom())
+				return tea.Batch(cmds...)
+			}
+		}
+
+		// Default: Agent
+		_, err := p.app.CoderAgent.Run(context.Background(), session.ID, agentText, attachments...)
+		if err != nil {
+			return util.ReportError(err)
+		}
+		cmds = append(cmds, p.chat.GoToBottom())
+		return tea.Batch(cmds...)
+
+	default: // Agent
+		_, err := p.app.CoderAgent.Run(context.Background(), session.ID, text, attachments...)
+		if err != nil {
+			return util.ReportError(err)
+		}
+		cmds = append(cmds, p.chat.GoToBottom())
+		return tea.Batch(cmds...)
 	}
-	_, err := p.app.CoderAgent.Run(context.Background(), session.ID, text, attachments...)
-	if err != nil {
-		return util.ReportError(err)
-	}
-	cmds = append(cmds, p.chat.GoToBottom())
-	return tea.Batch(cmds...)
 }
 
 func (p *chatPage) Bindings() []key.Binding {
@@ -984,8 +1072,8 @@ func (p *chatPage) Help() help.KeyMap {
 			)
 		case PanelTypeEditor:
 			newLineBinding := key.NewBinding(
-				key.WithKeys("ctrl+j"),
-				key.WithHelp("ctrl+j", "newline"),
+				key.WithKeys("shift+enter", "ctrl+j"),
+				key.WithHelp("shift+enter", "newline"),
 			)
 			shortList = append(shortList, newLineBinding)
 			fullList = append(fullList,

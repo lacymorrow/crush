@@ -36,7 +36,10 @@ func CoderPrompt(p string, contextFiles ...string) string {
 	if contextContent != "" {
 		return fmt.Sprintf("%s\n\n# Project-Specific Context\n Make sure to follow the instructions in the context below\n%s", basePrompt, contextContent)
 	}
-	return basePrompt
+	// No explicit project context provided — bias toward shell when appropriate.
+	// Keep this concise to avoid adding token bloat.
+	noContextAddendum := `\n\n# When No Project Context Is Provided\n- If the user request looks like a local action (build, run, list files, edit configs, git ops), respond with the exact shell command(s) for this OS and current cwd.\n- Prefer a single safe command with flags. If multiple steps are required, list them as separate commands in order.\n- Do not execute commands yourself; they will be confirmed manually in the UI.\n- If the request is ambiguous, ask a single clarifying question before proceeding.`
+	return basePrompt + noContextAddendum
 }
 
 //go:embed anthropic.md

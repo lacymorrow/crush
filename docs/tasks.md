@@ -4,7 +4,7 @@
 - T0.1: Fork `charmbracelet/crush`; set module name and licensing/NOTICE updates.
   - Acceptance: `lash --version` prints fork info; license headers preserved.
 - T0.2: Add `lash` config namespace to `crush.json` schema and parser.
-  - Acceptance: `lash.default_mode`, `lash.keymap`, `lash.real_shell` parsed with defaults.
+  - Acceptance: `lash.default_mode` (defaults to `auto`), `lash.keymap`, `lash.real_shell` parsed with defaults; last selected mode is persisted and takes precedence on startup.
 - T0.3: Integrate minimal statusline rendering for mode and key hints.
   - Acceptance: Statusline shows Shell/Agent/Auto; help overlay toggles.
 

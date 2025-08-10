@@ -11,8 +11,10 @@ type PersistentShell struct {
 }
 
 var (
-	once          sync.Once
-	shellInstance *PersistentShell
+	once              sync.Once
+	shellInstance     *PersistentShell
+	userOnce          sync.Once
+	userShellInstance *PersistentShell
 )
 
 // GetPersistentShell returns the singleton persistent shell instance
@@ -27,6 +29,20 @@ func GetPersistentShell(cwd string) *PersistentShell {
 		}
 	})
 	return shellInstance
+}
+
+// GetUserPersistentShell returns a persistent shell intended for user commands.
+// It does not apply tool-level block functions.
+func GetUserPersistentShell(cwd string) *PersistentShell {
+	userOnce.Do(func() {
+		userShellInstance = &PersistentShell{
+			Shell: NewShell(&Options{
+				WorkingDir: cwd,
+				Logger:     &loggingAdapter{},
+			}),
+		}
+	})
+	return userShellInstance
 }
 
 // slog.dapter adapts the internal slog.package to the Logger interface
