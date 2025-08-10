@@ -1,13 +1,13 @@
 ## Lash: Design (Fork of Charmbracelet Crush)
 
 ### Overview
-Lash is a login-shell-friendly fork of Charmbracelet Crush that adds Shell and Auto modes while preserving Crush’s Agent mode and built-in Model Context Protocol (MCP) support. It runs headless in any Unix terminal (including over SSH), feels like a normal shell by default, and exposes a minimal statusline showing the active mode: Shell, Agent, or Auto.
+Lash is a login-shell-friendly fork of Charmbracelet Crush that adds Shell and Auto modes while preserving Crush’s Agent mode and built-in Model Context Protocol (MCP) support. It runs headless in any Unix terminal (including over SSH), launches in the previously selected mode (persisted across sessions) and defaults to Auto on first run, and exposes a minimal statusline showing the active mode: Shell, Agent, or Auto.
 
 Reference: [charmbracelet/crush](https://github.com/charmbracelet/crush)
 
 ### Goals
 - Mandatory MCP: reuse Crush’s native MCP support (stdio/http/SSE) and configuration.
-- Shell-like UX: default to a real shell in a PTY; behave like a typical login shell.
+- Shell-like UX: provide a real shell in a PTY; behave like a typical login shell.
 - Headless + SSH-safe: no GUI; operates inside SSH sessions; safe non-interactive behavior.
 - Minimal UI: single-row statusline and a small confirmation panel for agent-suggested commands.
 - Hotkeys for mode switching; configurable.
@@ -20,7 +20,7 @@ Reference: [charmbracelet/crush](https://github.com/charmbracelet/crush)
 ### High-level Architecture (on top of Crush)
 - Agent Mode (existing): retain Crush’s agent loop, MCP plumbing, config, and logging.
 - New Shell Mode: spawn the user’s real shell (e.g., `/bin/zsh`) in a PTY; pass-through input/output, support resize, preserve terminal features (e.g., Vim, less, fzf).
-- New Auto Mode: simple router that sends natural-language prompts to Agent, and obvious commands to Shell. Disabled by default; can be enabled via config.
+- New Auto Mode: simple router that sends natural-language prompts to Agent, and obvious commands to Shell. Selected by default on first run; users can change modes via config or UI. The last selected mode is persisted across sessions.
 - Mode Router: central dispatcher that directs input to PTY (Shell) or MCP agent (Agent); applies Auto heuristics when enabled.
 - Statusline + Keymap: minimal mode indicator and key hints; configurable keybindings for mode switching and confirmations.
 - Non-interactive Guard: if no TTY or invoked with `-c`, immediately exec the real shell to preserve scripts/remote commands.
@@ -28,7 +28,7 @@ Reference: [charmbracelet/crush](https://github.com/charmbracelet/crush)
 ### Process Model
 1) Startup (interactive TTY):
    - Load `crush.json` (kept for compatibility), read Lash extensions.
-   - Initialize TUI; default active mode: Shell.
+   - Initialize TUI; active mode is the previously selected mode; if none exists (first run), default to Auto.
    - Spawn PTY with real shell; lazy-start MCP client on first Agent use.
 2) Non-interactive or `-c` mode: exec the real shell with original arguments.
 3) SSH: works transparently when Lash is a login shell on remote hosts; the TUI renders over SSH.
@@ -49,10 +49,10 @@ Example (JSON):
     }
   },
   "lash": {
-    "default_mode": "shell",        
-    "real_shell": "/bin/zsh",        
-    "statusline_position": "bottom", 
-    "auto_mode_enabled": false,
+    "default_mode": "auto",         
+    "real_shell": "/bin/zsh",       
+    "statusline_position": "bottom",
+    "auto_mode_enabled": true,
     "router": { "prefixes": ["ai:", "?"] },
     "safety": { "confirm_agent_exec": true },
     "keymap": {

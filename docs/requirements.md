@@ -4,7 +4,7 @@
 - MCP is mandatory. Use Crush’s built-in MCP mechanisms and configuration; do not remove or regress them. Reference: [charmbracelet/crush](https://github.com/charmbracelet/crush)
 - Headless operation in any Unix terminal, including over SSH.
 - Behaves like a normal login shell by default:
-  - Interactive TTY: start in Shell mode (PTY-backed real shell).
+  - Interactive TTY: start in the previously selected mode; on first run default to Auto. A real shell is always available in a PTY when Shell mode is active.
   - Non-interactive or `-c`: immediately exec the real shell with original args (preserve scripts/remote commands).
 - Minimal UI with a one-line statusline showing current mode: Shell | Agent | Auto.
 - Mode switching via keybindings (default Ctrl-1/2/3); configurable.
@@ -25,7 +25,7 @@
    - Stream responses; capture suggested command and explanation for confirmation.
 
 3) Auto Mode
-   - Optional router (off by default); heuristics:
+   - Router enabled by default on first run; heuristics:
      - `ai:` or `?` prefix → Agent
      - Otherwise → Shell
    - Provide an override keybinding to temporarily route the next line to Agent.
@@ -40,7 +40,7 @@
    - Optional convenience: `lash ssh user@host` delegates to system `ssh` in a PTY.
 
 6) Configuration
-   - Preserve `crush.json` schema; add `lash` namespaced keys for mode defaults, keymap, safety toggles, shell path, router settings.
+   - Preserve `crush.json` schema; add `lash` namespaced keys for mode defaults, keymap, safety toggles, shell path, router settings. Persist the last selected mode across sessions; if not present, use `lash.default_mode` (default: `auto`).
    - Hot-reload not required; re-read on startup is sufficient.
 
 7) Logging/Observability
