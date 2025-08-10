@@ -420,6 +420,29 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 		a.status.SetLeft("Mode: " + a.activeMode)
 		a.app.Mode = a.activeMode
 		return a.handleWindowResize(a.wWidth, a.wHeight)
+	case key.Matches(msg, a.keyMap.ToggleAutoConfirm):
+		// Toggle Lash safety confirm flag at runtime and persist to config data file
+		cfg := config.Get()
+		if cfg.Lash == nil {
+			cfg.Lash = &config.LashConfig{}
+		}
+		current := true
+		if cfg.Lash.Safety.ConfirmAgentExec != nil {
+			current = *cfg.Lash.Safety.ConfirmAgentExec
+		}
+		newVal := !current
+		cfg.Lash.Safety.ConfirmAgentExec = &newVal
+		_ = cfg.SetConfigField("lash.safety.confirm_agent_exec", newVal)
+		// Update permission service allowlist live
+		currentAllowed := []string{"bash", "bash:execute"}
+		if newVal == false {
+			// enable auto-confirm: allow bash executions without prompts
+			a.app.Permissions.SetAllowedTools(currentAllowed)
+			return util.ReportInfo("Auto-confirm enabled")
+		}
+		// disable auto-confirm: remove from allowlist by setting empty list
+		a.app.Permissions.SetAllowedTools([]string{})
+		return util.ReportInfo("Auto-confirm disabled")
 	case key.Matches(msg, a.keyMap.Suspend):
 		if a.app.CoderAgent != nil && a.app.CoderAgent.IsBusy() {
 			return util.ReportWarn("Agent is busy, please wait...")
