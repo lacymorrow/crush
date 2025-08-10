@@ -217,8 +217,9 @@ func (s *Shell) execPOSIX(ctx context.Context, command string) (string, string, 
 	}
 
 	var stdout, stderr bytes.Buffer
+	// Provide a non-nil stdin to avoid panics in coreutils (e.g., cat reading from stdin)
 	runner, err := interp.New(
-		interp.StdIO(nil, &stdout, &stderr),
+		interp.StdIO(bytes.NewReader(nil), &stdout, &stderr),
 		interp.Interactive(false),
 		interp.Env(expand.ListEnviron(s.env...)),
 		interp.Dir(s.cwd),
