@@ -14,6 +14,9 @@ type KeyMap struct {
 	// Modes
 	ToggleMode key.Binding
 
+	// Safety
+	ToggleAutoConfirm key.Binding
+
 	pageBindings []key.Binding
 }
 
@@ -44,6 +47,12 @@ func DefaultKeyMap() KeyMap {
 		ToggleMode: key.NewBinding(
 			key.WithKeys("ctrl+space"),
 			key.WithHelp("ctrl+space", "mode"),
+		),
+
+		// Toggle auto-confirm (Shift-Tab)
+		ToggleAutoConfirm: key.NewBinding(
+			key.WithKeys("shift+tab"),
+			key.WithHelp("shift+tab", "auto-confirm"),
 		),
 	}
 }

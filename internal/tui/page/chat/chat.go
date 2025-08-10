@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/v2/help"
@@ -685,7 +686,11 @@ func (p *chatPage) sendMessage(text string, attachments []message.Attachment) te
 		cmds = append(cmds, util.CmdHandler(chat.SessionSelectedMsg(session)))
 	}
 	// If active mode is Shell, bypass AI and execute in persistent shell, then append output as assistant message.
-	if m, ok := util.TryGetAppModel(); ok && m.ActiveMode() == "Shell" {
+	mode := p.app.Mode
+	if m, ok := util.TryGetAppModel(); ok {
+		mode = m.ActiveMode()
+	}
+	if mode == "Shell" {
 		sh := shell.GetPersistentShell(p.app.Config().WorkingDir())
 		stdout, stderr, err := sh.Exec(context.Background(), text)
 		if err != nil {
@@ -694,6 +699,40 @@ func (p *chatPage) sendMessage(text string, attachments []message.Attachment) te
 				stderr = err.Error()
 			} else {
 				stderr += "\n" + err.Error()
+			}
+
+			// Auto mode: prefer Shell for obvious commands; fallback to Agent otherwise
+			if mode == "Auto" {
+				trimmed := strings.TrimSpace(text)
+				// Heuristics: looks like a command if it contains a space or a path/flag, or starts with ./, /, ~/, or a known exe-ish token
+				looksLikeCmd := strings.HasPrefix(trimmed, "./") || strings.HasPrefix(trimmed, "/") || strings.HasPrefix(trimmed, "~/") ||
+					strings.Contains(trimmed, " ") || strings.Contains(trimmed, "-")
+				if looksLikeCmd {
+					sh := shell.GetPersistentShell(p.app.Config().WorkingDir())
+					stdout, stderr, err := sh.Exec(context.Background(), text)
+					if err != nil {
+						if stderr == "" {
+							stderr = err.Error()
+						} else {
+							stderr += "\n" + err.Error()
+						}
+					}
+					_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
+						Role:  message.User,
+						Parts: []message.ContentPart{message.TextContent{Text: text}},
+					})
+					combined := stdout
+					if combined != "" && stderr != "" {
+						combined += "\n"
+					}
+					combined += stderr
+					_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
+						Role:  message.Assistant,
+						Parts: []message.ContentPart{message.TextContent{Text: combined}},
+					})
+					cmds = append(cmds, p.chat.GoToBottom())
+					return tea.Batch(cmds...)
+				}
 			}
 		}
 		// Save user command
@@ -997,6 +1036,7 @@ func (p *chatPage) Help() help.KeyMap {
 		// Add compact mode toggles only (remove ctrl+c from short help to keep it concise)
 		shortList = append(shortList,
 			key.NewBinding(key.WithKeys("ctrl+space"), key.WithHelp("ctrl+space", "mode")),
+			key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "auto-confirm")),
 		)
 	}
 
