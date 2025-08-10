@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/bubbles/v2/textarea"
 	"github.com/charmbracelet/bubbles/v2/viewport"
@@ -20,21 +21,22 @@ import (
 	"github.com/charmbracelet/crush/internal/tui/util"
 	"github.com/charmbracelet/lipgloss/v2"
 	pty "github.com/creack/pty"
-    "github.com/atotto/clipboard"
 )
 
 // Minimal Shell page: sends entered commands to the real shell using `sh -lc` as a stub.
 // Follow-up: replace with a true PTY for full interactive compatibility.
 
 type Page struct {
-	app    *app.App
-	width  int
-	height int
-	ta     *textarea.Model
-	buf    bytes.Buffer
-	vp     viewport.Model
-	keyRun key.Binding
-	keyCopy key.Binding
+	app      *app.App
+	width    int
+	height   int
+	ta       *textarea.Model
+	buf      bytes.Buffer
+	vp       viewport.Model
+	keyRun   key.Binding
+	keyCopy  key.Binding
+	keyPaste key.Binding
+	keyCopy  key.Binding
 
 	ptyFile    *os.File
 	shellCmd   *exec.Cmd
@@ -49,7 +51,11 @@ func New(app *app.App) *Page {
 	ta.Focus()
 	vp := viewport.New()
 	vp.KeyMap = viewport.KeyMap{}
-	return &Page{app: app, ta: ta, vp: vp, keyRun: key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "run")), keyCopy: key.NewBinding(key.WithKeys("y"), key.WithHelp("y", "copy output"))}
+	return &Page{app: app, ta: ta, vp: vp,
+		keyRun:   key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "run")),
+		keyCopy:  key.NewBinding(key.WithKeys("y"), key.WithHelp("y", "copy output")),
+		keyPaste: key.NewBinding(key.WithKeys("ctrl+v"), key.WithHelp("ctrl+v", "paste")),
+	}
 }
 
 type shellTickMsg struct{}
@@ -84,6 +90,16 @@ func (p *Page) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmdline := strings.TrimSpace(p.ta.Value())
 			if cmdline != "" {
 				return p, p.writeToShell(cmdline + "\n")
+			}
+			return p, nil
+		}
+		if key.Matches(msg, p.keyCopy) {
+			_ = clipboard.WriteAll(p.buf.String())
+			return p, util.ReportInfo("Output copied")
+		}
+		if key.Matches(msg, p.keyPaste) {
+			if clip, err := clipboard.ReadAll(); err == nil {
+				p.ta.InsertString(clip)
 			}
 			return p, nil
 		}

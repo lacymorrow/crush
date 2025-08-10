@@ -494,6 +494,14 @@ func (a *appModel) View() tea.View {
 	}
 	pageView := page.View()
 	components := []string{
+		// Add a gradient title similar to chat page when in shell
+		func() string {
+			if a.currentPage == page.ShellPageID {
+				t := styles.CurrentTheme()
+				return t.S().Base.Render(core.Title("Shell", a.width))
+			}
+			return ""
+		}(),
 		pageView,
 	}
 	components = append(components, a.status.View())
