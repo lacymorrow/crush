@@ -37,6 +37,10 @@
         "permissions": {
           "$ref": "#/$defs/Permissions",
           "description": "Permission settings for tool usage"
+        },
+        "lash": {
+          "$ref": "#/$defs/LashConfig",
+          "description": "Lash-specific options"
         }
       },
       "additionalProperties": false,
@@ -77,6 +81,27 @@
       "additionalProperties": {
         "$ref": "#/$defs/LSPConfig"
       },
+      "type": "object"
+    },
+    "LashConfig": {
+      "properties": {
+        "safety": {
+          "$ref": "#/$defs/LashSafety",
+          "description": "Lash-specific safety options"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "LashSafety": {
+      "properties": {
+        "confirm_agent_exec": {
+          "type": "boolean",
+          "description": "Require confirmation before executing agent-suggested shell commands (bash:execute)",
+          "default": true
+        }
+      },
+      "additionalProperties": false,
       "type": "object"
     },
     "MCPConfig": {

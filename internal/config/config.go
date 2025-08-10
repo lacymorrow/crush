@@ -132,6 +132,18 @@ type Permissions struct {
 	SkipRequests bool     `json:"-"`                                                                                                                              // Automatically accept all permissions (YOLO mode)
 }
 
+// LashSafety holds Lash-specific safety toggles.
+type LashSafety struct {
+	// If true (default), agent-suggested shell executions require confirmation.
+	// If false, agent-suggested commands can execute without prompting.
+	ConfirmAgentExec *bool `json:"confirm_agent_exec,omitempty" jsonschema:"description=Require confirmation before executing agent-suggested shell commands (bash:execute),default=true"`
+}
+
+// LashConfig is the optional Lash-specific configuration namespace.
+type LashConfig struct {
+	Safety LashSafety `json:"safety,omitempty" jsonschema:"description=Lash-specific safety options"`
+}
+
 type Options struct {
 	ContextPaths         []string    `json:"context_paths,omitempty" jsonschema:"description=Paths to files containing context information for the AI,example=.cursorrules,example=CRUSH.md"`
 	TUI                  *TUIOptions `json:"tui,omitempty" jsonschema:"description=Terminal user interface options"`
@@ -258,6 +270,9 @@ type Config struct {
 	Options *Options `json:"options,omitempty" jsonschema:"description=General application options"`
 
 	Permissions *Permissions `json:"permissions,omitempty" jsonschema:"description=Permission settings for tool usage"`
+
+	// Lash-specific configuration
+	Lash *LashConfig `json:"lash,omitempty" jsonschema:"description=Lash-specific options"`
 
 	// Internal
 	workingDir string `json:"-"`
