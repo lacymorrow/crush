@@ -1,6 +1,8 @@
 package quit
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/v2/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/crush/internal/tui/components/dialogs"
@@ -36,7 +38,8 @@ func NewQuitDialog() QuitDialog {
 }
 
 func (q *quitDialogCmp) Init() tea.Cmd {
-	return nil
+	// Auto-quit after 2 seconds unless user cancels (presses No or closes)
+	return tea.Tick(2*time.Second, func(time.Time) tea.Msg { return tea.Quit })
 }
 
 // Update handles keyboard input for the quit dialog.
