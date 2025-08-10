@@ -25,10 +25,10 @@
    - Stream responses; capture suggested command and explanation for confirmation.
 
 3) Auto Mode
-   - Router enabled by default on first run; heuristics:
-     - `ai:` or `?` prefix → Agent
-     - Otherwise → Shell
-   - Provide an override keybinding to temporarily route the next line to Agent.
+   - Router enabled by default on first run:
+      - If first token resolves to an executable (absolute/relative path or via PATH) → Shell
+      - Otherwise → Agent
+    - Provide an override keybinding to temporarily route the next line to Agent.
 
 4) Login Shell Safety
    - Works as the user’s login shell (`chsh`) and within SSH sessions.

@@ -118,31 +118,24 @@ type chatPage struct {
 	isProjectInit    bool
 }
 
-// shouldRouteToShell returns true if the input likely refers to a shell command.
-// Heuristics:
-// - Starts with common shell operators or shebang indicators
-// - First token resolves in PATH (exec.LookPath)
-// - First token looks like a path (./, ../, /)
+// shouldRouteToShell returns true if the first token resolves to an executable command.
+// Rules:
+// - If the first token contains a slash, require it to point to an executable file
+// - Else, resolve via PATH using exec.LookPath
 func shouldRouteToShell(input string) bool {
-	if input == "" {
-		return false
-	}
-	// Quick checks for shell-y constructs
-	shellyPrefixes := []string{"./", "../", "/", "sudo ", "echo ", "export ", "unset ", "set ", "cd ", "pwd", "cat ", "ls", "git ", "brew ", "npm ", "pnpm ", "yarn ", "go ", "make ", "cargo ", "pip ", "python ", "python3 ", "ruby ", "node ", "bash ", "sh ", "zsh "}
-	lowered := strings.ToLower(strings.TrimSpace(input))
-	for _, p := range shellyPrefixes {
-		if strings.HasPrefix(lowered, p) {
-			return true
-		}
-	}
-	// PATH resolution for first token
 	fields := strings.Fields(input)
 	if len(fields) == 0 {
 		return false
 	}
 	first := fields[0]
-	if strings.HasPrefix(first, "./") || strings.HasPrefix(first, "../") || strings.HasPrefix(first, "/") {
-		return true
+	if strings.Contains(first, "/") {
+		if info, err := os.Stat(first); err == nil {
+			mode := info.Mode()
+			if !mode.IsDir() && (mode&0o111) != 0 {
+				return true
+			}
+		}
+		return false
 	}
 	if _, err := exec.LookPath(first); err == nil {
 		return true
@@ -754,26 +747,8 @@ func (p *chatPage) sendMessage(text string, attachments []message.Attachment) te
 		return tea.Batch(cmds...)
 
 	case "Auto":
-		// Router: explicit prefixes go to Agent, otherwise decide based on heuristics
-		trimmed := strings.TrimSpace(text)
-		routeToAgent := strings.HasPrefix(trimmed, "ai:") || strings.HasPrefix(trimmed, "?")
-		agentText := trimmed
-		if strings.HasPrefix(agentText, "ai:") {
-			agentText = strings.TrimSpace(strings.TrimPrefix(agentText, "ai:"))
-		} else if strings.HasPrefix(agentText, "?") {
-			agentText = strings.TrimSpace(strings.TrimPrefix(agentText, "?"))
-		}
-		if routeToAgent {
-			_, err := p.app.CoderAgent.Run(context.Background(), session.ID, agentText, attachments...)
-			if err != nil {
-				return util.ReportError(err)
-			}
-			cmds = append(cmds, p.chat.GoToBottom())
-			return tea.Batch(cmds...)
-		}
-
-		// If it looks like a shell command, attempt shell first
-		if shouldRouteToShell(trimmed) {
+		// Decide based on heuristics only (no explicit prefixes)
+		if shouldRouteToShell(strings.TrimSpace(text)) {
 			// Prefer persistent shell; if no output at all, try system shell; otherwise fall back to Agent
 			sh := shell.GetUserPersistentShell(p.app.Config().WorkingDir())
 			stdout, stderr, err := sh.Exec(context.Background(), text)
@@ -835,7 +810,7 @@ func (p *chatPage) sendMessage(text string, attachments []message.Attachment) te
 		}
 
 		// Default: Agent
-		_, err := p.app.CoderAgent.Run(context.Background(), session.ID, agentText, attachments...)
+		_, err := p.app.CoderAgent.Run(context.Background(), session.ID, text, attachments...)
 		if err != nil {
 			return util.ReportError(err)
 		}
