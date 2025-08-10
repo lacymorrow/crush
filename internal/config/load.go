@@ -328,6 +328,15 @@ func (c *Config) setDefaults(workingDir string) {
 		c.LSP = make(map[string]LSPConfig)
 	}
 
+	// Lash defaults
+	if c.Lash == nil {
+		c.Lash = &LashConfig{}
+	}
+	if c.Lash.Safety.ConfirmAgentExec == nil {
+		v := true
+		c.Lash.Safety.ConfirmAgentExec = &v
+	}
+
 	// Add the default context paths if they are not already present
 	c.Options.ContextPaths = append(defaultContextPaths, c.Options.ContextPaths...)
 	slices.Sort(c.Options.ContextPaths)

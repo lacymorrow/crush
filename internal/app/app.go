@@ -64,6 +64,12 @@ func New(ctx context.Context, conn *sql.DB, cfg *config.Config) (*App, error) {
 	if cfg.Permissions != nil && cfg.Permissions.AllowedTools != nil {
 		allowedTools = cfg.Permissions.AllowedTools
 	}
+	// If Lash safety confirm is explicitly disabled, allow bash:execute without prompts.
+	if cfg.Lash != nil && cfg.Lash.Safety.ConfirmAgentExec != nil && !*cfg.Lash.Safety.ConfirmAgentExec {
+		// Allow either tool-wide or specific action key depending on how permissions are checked
+		// Permission service treats both "bash" and "bash:execute" as allow entries
+		allowedTools = append(allowedTools, "bash", "bash:execute")
+	}
 
 	app := &App{
 		Sessions:    sessions,
