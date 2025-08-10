@@ -15,6 +15,8 @@ type StatusCmp interface {
 	util.Model
 	ToggleFullHelp()
 	SetKeyMap(keyMap help.KeyMap)
+	// SetLeft sets a left-aligned prefix to display before the help keys (e.g., active mode)
+	SetLeft(text string)
 }
 
 type statusCmp struct {
@@ -23,6 +25,7 @@ type statusCmp struct {
 	messageTTL time.Duration
 	help       help.Model
 	keyMap     help.KeyMap
+	left       string
 }
 
 // clearMessageCmd is a command that clears status messages after a timeout
@@ -59,7 +62,13 @@ func (m *statusCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *statusCmp) View() string {
 	t := styles.CurrentTheme()
-	status := t.S().Base.Padding(0, 1, 1, 1).Render(m.help.View(m.keyMap))
+	helpView := m.help.View(m.keyMap)
+	if m.left != "" {
+		// Tiny left prefix
+		left := t.S().Base.Foreground(t.FgMuted).Faint(true).Render(m.left)
+		helpView = left + "  " + helpView
+	}
+	status := t.S().Base.Padding(0, 1, 1, 1).Render(helpView)
 	if m.info.Msg != "" {
 		status = m.infoMsg()
 	}
@@ -96,6 +105,10 @@ func (m *statusCmp) ToggleFullHelp() {
 
 func (m *statusCmp) SetKeyMap(keyMap help.KeyMap) {
 	m.keyMap = keyMap
+}
+
+func (m *statusCmp) SetLeft(text string) {
+	m.left = text
 }
 
 func NewStatusCmp() StatusCmp {

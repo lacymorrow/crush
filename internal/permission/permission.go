@@ -52,6 +52,8 @@ type Service interface {
 	SetSkipRequests(skip bool)
 	SkipRequests() bool
 	SubscribeNotifications(ctx context.Context) <-chan pubsub.Event[PermissionNotification]
+	// Update the allowlist of tools/actions that do not require confirmation
+	SetAllowedTools(tools []string)
 }
 
 type permissionService struct {
@@ -231,4 +233,12 @@ func NewPermissionService(workingDir string, skip bool, allowedTools []string) S
 		allowedTools:        allowedTools,
 		pendingRequests:     csync.NewMap[string, chan bool](),
 	}
+}
+
+// SetAllowedTools replaces the allowlist at runtime.
+func (s *permissionService) SetAllowedTools(tools []string) {
+	s.requestMu.Lock()
+	defer s.requestMu.Unlock()
+	// make a copy to avoid external modification
+	s.allowedTools = append([]string(nil), tools...)
 }
