@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 
@@ -128,6 +127,12 @@ func shouldRouteToShell(input string) bool {
 		return false
 	}
 	first := fields[0]
+
+	// Treat common shell builtins as shell-routable even if not found on PATH
+	switch first {
+	case "cd", "export", "set", "unset", "alias", "unalias", "pwd":
+		return true
+	}
 	if strings.Contains(first, "/") {
 		if info, err := os.Stat(first); err == nil {
 			mode := info.Mode()
@@ -749,64 +754,40 @@ func (p *chatPage) sendMessage(text string, attachments []message.Attachment) te
 	case "Auto":
 		// Decide based on heuristics only (no explicit prefixes)
 		if shouldRouteToShell(strings.TrimSpace(text)) {
-			// Prefer persistent shell; if no output at all, try system shell; otherwise fall back to Agent
+			// Prefer persistent shell; synthesize output if the command succeeds but prints nothing
 			sh := shell.GetUserPersistentShell(p.app.Config().WorkingDir())
 			stdout, stderr, err := sh.Exec(context.Background(), text)
-			if stdout != "" || stderr != "" {
-				if err != nil {
-					if stderr == "" {
-						stderr = err.Error()
-					} else {
-						stderr += "\n" + err.Error()
-					}
+			if err != nil {
+				if stderr == "" {
+					stderr = err.Error()
+				} else {
+					stderr += "\n" + err.Error()
 				}
-				_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
-					Role:  message.User,
-					Parts: []message.ContentPart{message.TextContent{Text: text}},
-				})
-				combined := stdout
-				if combined != "" && stderr != "" {
-					combined += "\n"
+			}
+			combined := stdout
+			if combined != "" && stderr != "" {
+				combined += "\n"
+			}
+			combined += stderr
+			if combined == "" && err == nil {
+				// No visible output; provide a helpful acknowledgement
+				trimmed := strings.TrimSpace(text)
+				if strings.HasPrefix(trimmed, "cd") {
+					combined = "cwd: " + sh.GetWorkingDir()
+				} else {
+					combined = "(ok)"
 				}
-				combined += stderr
-				_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
-					Role:  message.Assistant,
-					Parts: []message.ContentPart{message.TextContent{Text: combined}},
-				})
-				cmds = append(cmds, p.chat.GoToBottom())
-				return tea.Batch(cmds...)
 			}
-
-			// Try real system shell as a last attempt before agent
-			var sysOut []byte
-			var sysErr error
-			if runtime.GOOS == "windows" {
-				cmd := exec.Command("cmd", "/C", text)
-				cmd.Dir = p.app.Config().WorkingDir()
-				cmd.Env = os.Environ()
-				sysOut, sysErr = cmd.CombinedOutput()
-			} else {
-				cmd := exec.Command("sh", "-lc", text)
-				cmd.Dir = p.app.Config().WorkingDir()
-				cmd.Env = os.Environ()
-				sysOut, sysErr = cmd.CombinedOutput()
-			}
-			if len(sysOut) > 0 {
-				_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
-					Role:  message.User,
-					Parts: []message.ContentPart{message.TextContent{Text: text}},
-				})
-				outStr := string(sysOut)
-				if sysErr != nil {
-					outStr += "\n" + sysErr.Error()
-				}
-				_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
-					Role:  message.Assistant,
-					Parts: []message.ContentPart{message.TextContent{Text: outStr}},
-				})
-				cmds = append(cmds, p.chat.GoToBottom())
-				return tea.Batch(cmds...)
-			}
+			_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
+				Role:  message.User,
+				Parts: []message.ContentPart{message.TextContent{Text: text}},
+			})
+			_, _ = p.app.Messages.Create(context.Background(), session.ID, message.CreateMessageParams{
+				Role:  message.Assistant,
+				Parts: []message.ContentPart{message.TextContent{Text: combined}},
+			})
+			cmds = append(cmds, p.chat.GoToBottom())
+			return tea.Batch(cmds...)
 		}
 
 		// Default: Agent
