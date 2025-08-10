@@ -23,8 +23,8 @@
   - Acceptance: Suggested command executes in PTY only on Ctrl-Enter.
 
 ### Milestone M3 — Auto Mode & Routing
-- T3.1: Add simple heuristics: `ai:` or `?` prefix → Agent else Shell.
-  - Acceptance: Prefix routes correctly; statusline reflects mode.
+- T3.1: Add routing by command existence (no prefixes): if first token resolves to an executable → Shell; otherwise → Agent.
+  - Acceptance: PATH/executable routing works; statusline reflects mode.
 - T3.2: Add configurable keybindings: Ctrl-1/2/3, Ctrl-Enter, Ctrl-/.
   - Acceptance: Overrides via `crush.json` under `lash.keymap`.
 

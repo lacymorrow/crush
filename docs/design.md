@@ -20,7 +20,7 @@ Reference: [charmbracelet/crush](https://github.com/charmbracelet/crush)
 ### High-level Architecture (on top of Crush)
 - Agent Mode (existing): retain Crush’s agent loop, MCP plumbing, config, and logging.
 - New Shell Mode: spawn the user’s real shell (e.g., `/bin/zsh`) in a PTY; pass-through input/output, support resize, preserve terminal features (e.g., Vim, less, fzf).
-- New Auto Mode: simple router that sends natural-language prompts to Agent, and obvious commands to Shell. Selected by default on first run; users can change modes via config or UI. The last selected mode is persisted across sessions.
+- New Auto Mode: if the first token is a valid executable (absolute/relative path or found via PATH), route to Shell; otherwise route to Agent. Selected by default on first run; users can change modes via config or UI. The last selected mode is persisted across sessions.
 - Mode Router: central dispatcher that directs input to PTY (Shell) or MCP agent (Agent); applies Auto heuristics when enabled.
 - Statusline + Keymap: minimal mode indicator and key hints; configurable keybindings for mode switching and confirmations.
 - Non-interactive Guard: if no TTY or invoked with `-c`, immediately exec the real shell to preserve scripts/remote commands.
@@ -53,7 +53,6 @@ Example (JSON):
     "real_shell": "/bin/zsh",       
     "statusline_position": "bottom",
     "auto_mode_enabled": true,
-    "router": { "prefixes": ["ai:", "?"] },
     "safety": { "confirm_agent_exec": true },
     "keymap": {
       "shell_mode": "ctrl+1",
