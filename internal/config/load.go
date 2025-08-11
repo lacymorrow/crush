@@ -328,6 +328,11 @@ func (c *Config) setDefaults(workingDir string) {
 		c.LSP = make(map[string]LSPConfig)
 	}
 
+	// Default LSPs: enable Go via gopls if no LSPs are configured
+	if len(c.LSP) == 0 {
+		c.LSP["Go"] = LSPConfig{Command: "gopls"}
+	}
+
 	// Lash defaults
 	if c.Lash == nil {
 		c.Lash = &LashConfig{}

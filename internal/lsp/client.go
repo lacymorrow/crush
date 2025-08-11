@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -60,7 +61,20 @@ type Client struct {
 }
 
 func NewClient(ctx context.Context, name, command string, args ...string) (*Client, error) {
-	cmd := exec.CommandContext(ctx, command, args...)
+    // If gopls is requested but not found, try to auto-install it locally
+    if strings.Contains(strings.ToLower(command), "gopls") {
+        if _, err := exec.LookPath(command); err != nil {
+            if cfg := config.Get(); cfg != nil {
+                if installedPath, instErr := installGopls(ctx, filepath.Join(cfg.Options.DataDirectory, "bin")); instErr == nil {
+                    command = installedPath
+                } else {
+                    slog.Debug("gopls auto-install failed", "error", instErr)
+                }
+            }
+        }
+    }
+
+    cmd := exec.CommandContext(ctx, command, args...)
 	// Copy env
 	cmd.Env = os.Environ()
 
@@ -120,6 +134,65 @@ func NewClient(ctx context.Context, name, command string, args ...string) (*Clie
 	}()
 
 	return client, nil
+}
+
+// installGopls attempts to install gopls into a given bin directory and returns the absolute path.
+// It tries `go install golang.org/x/tools/gopls@latest` if Go is available.
+func installGopls(ctx context.Context, binDir string) (string, error) {
+    // Ensure Go is available
+    if _, err := exec.LookPath("go"); err != nil {
+        return "", fmt.Errorf("go toolchain not found: %w", err)
+    }
+
+    // Create bin dir
+    if err := os.MkdirAll(binDir, 0o755); err != nil {
+        return "", fmt.Errorf("failed to create bin dir: %w", err)
+    }
+
+    // On Windows the binary will be gopls.exe
+    exeName := "gopls"
+    if runtime.GOOS == "windows" {
+        exeName = "gopls.exe"
+    }
+    destPath := filepath.Join(binDir, exeName)
+
+    // If already exists, return
+    if _, err := os.Stat(destPath); err == nil {
+        return destPath, nil
+    }
+
+    // Install gopls into GOBIN or GOPATH/bin, then copy/symlink to dest
+    installCmd := exec.CommandContext(ctx, "go", "install", "golang.org/x/tools/gopls@latest")
+    installCmd.Env = os.Environ()
+    if out, err := installCmd.CombinedOutput(); err != nil {
+        return "", fmt.Errorf("failed to install gopls: %w (output: %s)", err, string(out))
+    }
+
+    // Locate installed gopls
+    goplsPath, err := exec.LookPath("gopls")
+    if err != nil {
+        return "", fmt.Errorf("gopls not found after install: %w", err)
+    }
+
+    // Copy binary to destPath
+    in, err := os.Open(goplsPath)
+    if err != nil {
+        return "", fmt.Errorf("failed to open installed gopls: %w", err)
+    }
+    defer in.Close()
+    out, err := os.Create(destPath)
+    if err != nil {
+        return "", fmt.Errorf("failed to create destination gopls: %w", err)
+    }
+    defer out.Close()
+    if _, err := io.Copy(out, in); err != nil {
+        return "", fmt.Errorf("failed to copy gopls: %w", err)
+    }
+    if err := out.Chmod(0o755); err != nil {
+        return "", fmt.Errorf("failed to chmod gopls: %w", err)
+    }
+
+    return destPath, nil
 }
 
 func (c *Client) RegisterNotificationHandler(method string, handler NotificationHandler) {
