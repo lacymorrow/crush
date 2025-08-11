@@ -81,7 +81,7 @@ type appModel struct {
 func (a *appModel) ActiveMode() string { return a.activeMode }
 
 // Init initializes the application model and returns initial commands.
-func (a appModel) Init() tea.Cmd {
+func (a *appModel) Init() tea.Cmd {
 	var cmds []tea.Cmd
 	cmd := a.pages[a.currentPage].Init()
 	cmds = append(cmds, cmd)
@@ -92,6 +92,11 @@ func (a appModel) Init() tea.Cmd {
 
 	cmds = append(cmds, tea.EnableMouseAllMotion)
 
+	// Initialize mode from persisted config if present
+	if cfg := config.Get(); cfg != nil && cfg.Lash != nil && cfg.Lash.Mode != "" {
+		a.activeMode = cfg.Lash.Mode
+		a.app.Mode = a.activeMode
+	}
 	// Always show initial info on launch
 	a.status.SetLeft("Mode: " + a.activeMode)
 
@@ -419,6 +424,11 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 		}
 		a.status.SetLeft("Mode: " + a.activeMode)
 		a.app.Mode = a.activeMode
+		// Persist last selected mode
+		if cfg := config.Get(); cfg != nil {
+			cfg.Lash.Mode = a.activeMode
+			_ = cfg.SetConfigField("lash.mode", a.activeMode)
+		}
 		return a.handleWindowResize(a.wWidth, a.wHeight)
 	case key.Matches(msg, a.keyMap.ToggleAutoConfirm):
 		// Toggle Lash safety confirm flag at runtime and persist to config data file

@@ -141,6 +141,8 @@ type LashSafety struct {
 
 // LashConfig is the optional Lash-specific configuration namespace.
 type LashConfig struct {
+	// Mode persists the last selected app mode: Shell, Agent, or Auto
+	Mode   string     `json:"mode,omitempty" jsonschema:"description=Last selected app mode (Shell, Agent, or Auto),enum=Shell,enum=Agent,enum=Auto,default=Shell"`
 	Safety LashSafety `json:"safety,omitempty" jsonschema:"description=Lash-specific safety options"`
 }
 

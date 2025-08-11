@@ -332,6 +332,9 @@ func (c *Config) setDefaults(workingDir string) {
 	if c.Lash == nil {
 		c.Lash = &LashConfig{}
 	}
+	if c.Lash.Mode == "" {
+		c.Lash.Mode = "Shell"
+	}
 	if c.Lash.Safety.ConfirmAgentExec == nil {
 		v := true
 		c.Lash.Safety.ConfirmAgentExec = &v
