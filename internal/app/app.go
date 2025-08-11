@@ -91,7 +91,7 @@ func New(ctx context.Context, conn *sql.DB, cfg *config.Config) (*App, error) {
 		serviceEventsWG: &sync.WaitGroup{},
 		tuiWG:           &sync.WaitGroup{},
 
-		Mode: "Shell",
+		Mode: cfg.ActiveMode(),
 	}
 
 	app.setupEvents()

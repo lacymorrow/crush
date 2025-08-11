@@ -64,9 +64,8 @@ func (m *statusCmp) View() string {
 	t := styles.CurrentTheme()
 	helpView := m.help.View(m.keyMap)
 	if m.left != "" {
-		// Tiny left prefix
-		left := t.S().Base.Foreground(t.FgMuted).Faint(true).Render(m.left)
-		helpView = left + "  " + helpView
+		// Pre-styled left prefix (render as-is)
+		helpView = m.left + "  " + helpView
 	}
 	status := t.S().Base.Padding(0, 1, 1, 1).Render(helpView)
 	if m.info.Msg != "" {

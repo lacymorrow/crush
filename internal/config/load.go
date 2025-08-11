@@ -333,7 +333,7 @@ func (c *Config) setDefaults(workingDir string) {
 		c.Lash = &LashConfig{}
 	}
 	if c.Lash.Mode == "" {
-		c.Lash.Mode = "Shell"
+		c.Lash.Mode = "Auto"
 	}
 	if c.Lash.Safety.ConfirmAgentExec == nil {
 		v := true
