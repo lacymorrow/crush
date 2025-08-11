@@ -73,6 +73,11 @@ type editorCmp struct {
 	historyIndex int                 // current index into history for active session, -1 means not in history selection
 	historyTemp  string              // the current unsent input before entering history navigation
 	inHistoryNav bool                // whether we are actively navigating history
+
+	// When the first submission happens before a session exists, we temporarily
+	// store that entry and attach it to the session's history once the session
+	// is created and SetSession is called.
+	pendingFirstHistoryEntry string
 }
 
 var DeleteKeyMaps = DeleteAttachmentKeyMaps{
@@ -160,14 +165,20 @@ func (m *editorCmp) send() tea.Cmd {
 		return util.CmdHandler(dialogs.OpenDialogMsg{Model: quit.NewQuitDialog()})
 	}
 
-	// Append to per-session history if non-empty and not a duplicate of the last entry
+	// Append to history. If we don't yet have a session, stash the first entry
+	// and move it to the proper session on SetSession.
 	if value != "" {
-		if m.inputHistory == nil {
-			m.inputHistory = make(map[string][]string)
-		}
-		h := m.inputHistory[m.session.ID]
-		if len(h) == 0 || h[len(h)-1] != value {
-			m.inputHistory[m.session.ID] = append(h, value)
+		if m.session.ID == "" {
+			// Defer attaching to a specific session ID until it's created.
+			m.pendingFirstHistoryEntry = value
+		} else {
+			if m.inputHistory == nil {
+				m.inputHistory = make(map[string][]string)
+			}
+			h := m.inputHistory[m.session.ID]
+			if len(h) == 0 || h[len(h)-1] != value {
+				m.inputHistory[m.session.ID] = append(h, value)
+			}
 		}
 		// Reset history navigation state after sending
 		m.inHistoryNav = false
@@ -603,6 +614,17 @@ func (c *editorCmp) SetSession(session session.Session) tea.Cmd {
 	c.inHistoryNav = false
 	c.historyIndex = -1
 	c.historyTemp = ""
+	// If we have a first entry typed before the session existed, attach it now.
+	if c.pendingFirstHistoryEntry != "" {
+		if c.inputHistory == nil {
+			c.inputHistory = make(map[string][]string)
+		}
+		history := c.inputHistory[c.session.ID]
+		if len(history) == 0 || history[len(history)-1] != c.pendingFirstHistoryEntry {
+			c.inputHistory[c.session.ID] = append(history, c.pendingFirstHistoryEntry)
+		}
+		c.pendingFirstHistoryEntry = ""
+	}
 	return nil
 }
 
