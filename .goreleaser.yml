@@ -134,7 +134,7 @@ aurs:
       mkdir -pv "${pkgdir}/usr/share/doc/lash/"
       install -Dm644 README* "${pkgdir}/usr/share/doc/crush/"
 
-homebrew_taps:
+brews:
   - repository:
       owner: lacymorrow
       name: homebrew-tap
@@ -179,25 +179,25 @@ nfpms:
       signature:
         key_file: '{{ if ne (index .Env "GPG_KEY_PATH") "" }}{{ .Env.GPG_KEY_PATH }}{{ else }}{{ end }}'
 
-signs:
-  - cmd: cosign
-    certificate: "${artifact}.pem"
-    args:
-      - sign-blob
-      - "--output-certificate=${certificate}"
-      - "--output-signature=${signature}"
-      - "${artifact}"
-      - "--yes"
-    artifacts: checksum
-    output: true
+# signs:
+#   - cmd: cosign
+#     certificate: "${artifact}.pem"
+#     args:
+#       - sign-blob
+#       - "--output-certificate=${certificate}"
+#       - "--output-signature=${signature}"
+#       - "${artifact}"
+#       - "--yes"
+#     artifacts: checksum
+#     output: true
 
 source:
   enabled: true
 
-sboms:
-  - artifacts: archive
-  - id: source
-    artifacts: source
+# sboms:
+#   - artifacts: archive
+#   - id: source
+#     artifacts: source
 
 nix:
   - repository:
