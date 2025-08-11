@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/crush/internal/lsp/protocol"
 	"github.com/charmbracelet/crush/internal/pubsub"
 	"github.com/charmbracelet/crush/internal/session"
+	"github.com/charmbracelet/crush/internal/shell"
 	"github.com/charmbracelet/crush/internal/tui/styles"
 	"github.com/charmbracelet/crush/internal/tui/util"
 	"github.com/charmbracelet/lipgloss/v2"
@@ -62,9 +63,9 @@ func (p *header) View() string {
 	t := styles.CurrentTheme()
 	details := p.details()
 	parts := []string{
-		t.S().Base.Foreground(t.Secondary).Render("Charm™"),
+		t.S().Base.Foreground(t.Secondary).Render("Lacy™"),
 		" ",
-		styles.ApplyBoldForegroundGrad("CRUSH", t.Secondary, t.Primary),
+		styles.ApplyBoldForegroundGrad("Shell", t.Secondary, t.Primary),
 		" ",
 	}
 
@@ -88,7 +89,12 @@ func (p *header) View() string {
 
 func (h *header) details() string {
 	t := styles.CurrentTheme()
-	cwd := fsext.DirTrim(fsext.PrettyPath(config.Get().WorkingDir()), 4)
+	// Prefer the live cwd from the persistent user shell; fall back to config cwd
+	liveCwd := shell.GetUserPersistentShell(config.Get().WorkingDir()).GetWorkingDir()
+	if liveCwd == "" {
+		liveCwd = config.Get().WorkingDir()
+	}
+	cwd := fsext.DirTrim(fsext.PrettyPath(liveCwd), 4)
 	parts := []string{
 		t.S().Muted.Render(cwd),
 	}

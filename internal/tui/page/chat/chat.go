@@ -174,11 +174,6 @@ func (p *chatPage) Init() tea.Cmd {
 		p.splash.SetOnboarding(true)
 		p.isOnboarding = true
 		p.splashFullScreen = true
-	} else if b, _ := config.ProjectNeedsInitialization(); b {
-		// Project needs CRUSH.md initialization
-		p.splash.SetProjectInit(true)
-		p.isProjectInit = true
-		p.splashFullScreen = true
 	} else {
 		// Ready to chat: focus editor, splash in background
 		p.focusedPane = PanelTypeEditor
@@ -362,11 +357,6 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case splash.OnboardingCompleteMsg:
 		p.splashFullScreen = false
-		if b, _ := config.ProjectNeedsInitialization(); b {
-			p.splash.SetProjectInit(true)
-			p.splashFullScreen = true
-			return p, p.SetSize(p.width, p.height)
-		}
 		err := p.app.InitCoderAgent()
 		if err != nil {
 			return p, util.ReportError(err)
@@ -487,8 +477,8 @@ func (p *chatPage) View() string {
 	} else {
 		messagesView := p.chat.View()
 		editorView := p.editor.View()
+		headerView := p.header.View()
 		if p.compact {
-			headerView := p.header.View()
 			chatView = lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerView,
@@ -504,6 +494,7 @@ func (p *chatPage) View() string {
 			)
 			chatView = lipgloss.JoinVertical(
 				lipgloss.Left,
+				headerView,
 				messages,
 				p.editor.View(),
 			)
@@ -623,12 +614,15 @@ func (p *chatPage) SetSize(width, height int) tea.Cmd {
 			cmds = append(cmds, p.editor.SetSize(width, EditorHeight))
 			cmds = append(cmds, p.header.SetWidth(width-BorderWidth))
 		} else {
-			cmds = append(cmds, p.chat.SetSize(width-SideBarWidth, height-EditorHeight))
+			// Non-compact: also account for header height and set header width
+			cmds = append(cmds, p.chat.SetSize(width, height-EditorHeight-HeaderHeight))
+			p.detailsWidth = width - DetailsPositioning
+			cmds = append(cmds, p.sidebar.SetSize(p.detailsWidth-LeftRightBorders, p.detailsHeight-TopBottomBorders))
 			cmds = append(cmds, p.editor.SetSize(width, EditorHeight))
-			cmds = append(cmds, p.sidebar.SetSize(SideBarWidth, height-EditorHeight))
+			cmds = append(cmds, p.header.SetWidth(width-BorderWidth))
 		}
-		cmds = append(cmds, p.editor.SetPosition(0, height-EditorHeight))
 	}
+
 	return tea.Batch(cmds...)
 }
 
@@ -726,7 +720,7 @@ func (p *chatPage) sendMessage(text string, attachments []message.Attachment) te
 
 	switch mode {
 	case "Shell":
-		sh := shell.GetPersistentShell(p.app.Config().WorkingDir())
+		sh := shell.GetUserPersistentShell(p.app.Config().WorkingDir())
 		stdout, stderr, err := sh.Exec(context.Background(), text)
 		if err != nil {
 			if stderr == "" {
