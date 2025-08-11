@@ -6,17 +6,14 @@
     }
   },
   "mcp": {
-    "alpaca": {
+    "exa": {
       "type": "stdio",
-      "command": "/Users/lacymorrow/repo/alpaca-mcp-server/myvenv/bin/python",
+      "command": "npx",
       "args": [
-        "/Users/lacymorrow/repo/alpaca-mcp-server/alpaca_mcp_server.py"
-      ],
-      "env": {
-        "ALPACA_API_KEY": "AKY9SX8LHXMCM5GCP7P3",
-        "ALPACA_SECRET_KEY": "iZDVh82xzDqV13jrMnTWjTW2SagFZb0iwIU3NVfQ",
-        "ALPACA_PAPER_TRADE": "False"
-      }
+        "-y",
+        "mcp-remote",
+        "https://mcp.exa.ai/mcp?exaApiKey=5ec08d79-c9db-4808-bfbb-e888355f9f94"
+      ]
     }
   }
 }
