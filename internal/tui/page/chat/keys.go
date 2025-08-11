@@ -2,6 +2,7 @@ package chat
 
 import (
 	"github.com/charmbracelet/bubbles/v2/key"
+	"github.com/lacymorrow/lash/internal/tui/components/core"
 )
 
 type KeyMap struct {
@@ -15,20 +16,20 @@ type KeyMap struct {
 func DefaultKeyMap() KeyMap {
 	return KeyMap{
 		NewSession: key.NewBinding(
-			key.WithKeys("ctrl+n"),
-			key.WithHelp("ctrl+n", "new session"),
+			key.WithKeys(core.KeyCtrlN),
+			key.WithHelp(core.KeyCtrlN, "new session"),
 		),
 		AddAttachment: key.NewBinding(
 			key.WithKeys("ctrl+f"),
 			key.WithHelp("ctrl+f", "add attachment"),
 		),
 		Cancel: key.NewBinding(
-			key.WithKeys("esc"),
-			key.WithHelp("esc", "cancel"),
+			key.WithKeys(core.KeyEsc),
+			key.WithHelp(core.KeyEsc, "cancel"),
 		),
 		Tab: key.NewBinding(
-			key.WithKeys("tab"),
-			key.WithHelp("tab", "change focus"),
+			key.WithKeys(core.KeyTab),
+			key.WithHelp(core.KeyTab, "change focus"),
 		),
 		Details: key.NewBinding(
 			key.WithKeys("ctrl+d"),

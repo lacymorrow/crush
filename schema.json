@@ -134,7 +134,7 @@
             "sse",
             "http"
           ],
-          "description": "Type of MCP connection",
+          "description": "Type of MCP connection (inferred if omitted)",
           "default": "stdio"
         },
         "url": {
@@ -159,10 +159,7 @@
         }
       },
       "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "type"
-      ]
+      "type": "object"
     },
     "MCPs": {
       "additionalProperties": {

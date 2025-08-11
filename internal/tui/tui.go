@@ -8,30 +8,30 @@ import (
 
 	"github.com/charmbracelet/bubbles/v2/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
-    "github.com/lacymorrow/lash/internal/app"
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/llm/agent"
-    "github.com/lacymorrow/lash/internal/permission"
-    "github.com/lacymorrow/lash/internal/pubsub"
-    cmpChat "github.com/lacymorrow/lash/internal/tui/components/chat"
-    "github.com/lacymorrow/lash/internal/tui/components/chat/splash"
-    "github.com/lacymorrow/lash/internal/tui/components/completions"
-    "github.com/lacymorrow/lash/internal/tui/components/core"
-    "github.com/lacymorrow/lash/internal/tui/components/core/layout"
-    "github.com/lacymorrow/lash/internal/tui/components/core/status"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs/commands"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs/compact"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs/filepicker"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs/models"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs/permissions"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs/quit"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs/sessions"
-    "github.com/lacymorrow/lash/internal/tui/page"
-    "github.com/lacymorrow/lash/internal/tui/page/chat"
-    "github.com/lacymorrow/lash/internal/tui/styles"
-    "github.com/lacymorrow/lash/internal/tui/util"
 	"github.com/charmbracelet/lipgloss/v2"
+	"github.com/lacymorrow/lash/internal/app"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/llm/agent"
+	"github.com/lacymorrow/lash/internal/permission"
+	"github.com/lacymorrow/lash/internal/pubsub"
+	cmpChat "github.com/lacymorrow/lash/internal/tui/components/chat"
+	"github.com/lacymorrow/lash/internal/tui/components/chat/splash"
+	"github.com/lacymorrow/lash/internal/tui/components/completions"
+	"github.com/lacymorrow/lash/internal/tui/components/core"
+	"github.com/lacymorrow/lash/internal/tui/components/core/layout"
+	"github.com/lacymorrow/lash/internal/tui/components/core/status"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs/commands"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs/compact"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs/filepicker"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs/models"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs/permissions"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs/quit"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs/sessions"
+	"github.com/lacymorrow/lash/internal/tui/page"
+	"github.com/lacymorrow/lash/internal/tui/page/chat"
+	"github.com/lacymorrow/lash/internal/tui/styles"
+	"github.com/lacymorrow/lash/internal/tui/util"
 )
 
 var lastMouseEvent time.Time
@@ -100,6 +100,20 @@ func (a *appModel) renderModeBadge(mode string) string {
 	}
 }
 
+// renderLeftPrefix composes the left status prefix: Mode badge and optional YOLO badge.
+func (a *appModel) renderLeftPrefix() string {
+	left := a.renderModeBadge(a.activeMode)
+	if a.app != nil && a.app.Permissions != nil && a.app.Permissions.SkipRequests() {
+		t := styles.CurrentTheme()
+		base := t.S().Base.Bold(true)
+		icon := t.S().Base.Foreground(t.Red).Render("▌")
+		label := base.Foreground(t.Red).Render("YOLO")
+		yolo := lipgloss.JoinHorizontal(lipgloss.Left, icon, " ", label)
+		left = lipgloss.JoinHorizontal(lipgloss.Left, left, "   ", yolo)
+	}
+	return left
+}
+
 // Init initializes the application model and returns initial commands.
 func (a *appModel) Init() tea.Cmd {
 	var cmds []tea.Cmd
@@ -116,7 +130,7 @@ func (a *appModel) Init() tea.Cmd {
 	a.activeMode = config.Get().ActiveMode()
 	a.app.Mode = a.activeMode
 	// Always show initial info on launch
-	a.status.SetLeft(a.renderModeBadge(a.activeMode))
+	a.status.SetLeft(a.renderLeftPrefix())
 
 	return tea.Batch(cmds...)
 }
@@ -208,6 +222,7 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 	case commands.ToggleYoloModeMsg:
 		a.app.Permissions.SetSkipRequests(!a.app.Permissions.SkipRequests())
+		a.status.SetLeft(a.renderLeftPrefix())
 	case commands.ToggleHelpMsg:
 		a.status.ToggleFullHelp()
 		a.showingFullHelp = !a.showingFullHelp
@@ -440,11 +455,14 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 		default:
 			a.activeMode = "Shell"
 		}
-		a.status.SetLeft(a.renderModeBadge(a.activeMode))
+		a.status.SetLeft(a.renderLeftPrefix())
 		a.app.Mode = a.activeMode
 		// Persist last selected mode using config helper
 		_ = config.Get().SetActiveMode(a.activeMode)
 		return a.handleWindowResize(a.wWidth, a.wHeight)
+	case key.Matches(msg, a.keyMap.ToggleYolo):
+		// Route through the common handler so pages update their prompts/styles
+		return util.CmdHandler(commands.ToggleYoloModeMsg{})
 	case key.Matches(msg, a.keyMap.ToggleAutoConfirm):
 		// Toggle Lash safety confirm flag at runtime and persist to config data file
 		cfg := config.Get()

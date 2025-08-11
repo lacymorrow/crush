@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/charmbracelet/bubbles/v2/key"
+	"github.com/lacymorrow/lash/internal/tui/components/core"
 )
 
 type KeyMap struct {
@@ -17,42 +18,51 @@ type KeyMap struct {
 	// Safety
 	ToggleAutoConfirm key.Binding
 
+	// YOLO
+	ToggleYolo key.Binding
+
 	pageBindings []key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
 	return KeyMap{
 		Quit: key.NewBinding(
-			key.WithKeys("ctrl+c"),
-			key.WithHelp("ctrl+c", "quit"),
+			key.WithKeys(core.KeyCtrlC),
+			key.WithHelp(core.KeyCtrlC, core.HelpQuit),
 		),
 		Help: key.NewBinding(
-			key.WithKeys("ctrl+g"),
-			key.WithHelp("ctrl+g", "more"),
+			key.WithKeys(core.KeyCtrlG),
+			key.WithHelp(core.KeyCtrlG, core.HelpMore),
 		),
 		Commands: key.NewBinding(
-			key.WithKeys("ctrl+p"),
-			key.WithHelp("ctrl+p", "commands"),
+			key.WithKeys(core.KeyCtrlP),
+			key.WithHelp(core.KeyCtrlP, core.HelpCommands),
 		),
 		Suspend: key.NewBinding(
-			key.WithKeys("ctrl+z"),
-			key.WithHelp("ctrl+z", "suspend"),
+			key.WithKeys(core.KeyCtrlZ),
+			key.WithHelp(core.KeyCtrlZ, core.HelpSuspend),
 		),
 		Sessions: key.NewBinding(
-			key.WithKeys("ctrl+s"),
-			key.WithHelp("ctrl+s", "sessions"),
+			key.WithKeys(core.KeyCtrlS),
+			key.WithHelp(core.KeyCtrlS, core.HelpSessions),
 		),
 
 		// Single toggle for modes
 		ToggleMode: key.NewBinding(
-			key.WithKeys("ctrl+space"),
-			key.WithHelp("ctrl+space", "mode"),
+			key.WithKeys(core.KeyCtrlSpace),
+			key.WithHelp(core.KeyCtrlSpace, core.HelpMode),
 		),
 
-		// Toggle auto-confirm (Shift-Tab)
+		// Toggle auto-confirm (Ctrl+Y)
 		ToggleAutoConfirm: key.NewBinding(
-			key.WithKeys("shift+tab"),
-			key.WithHelp("shift+tab", "auto-confirm"),
+			key.WithKeys(core.KeyCtrlY),
+			key.WithHelp(core.KeyCtrlY, core.HelpAutoConfirm),
+		),
+
+		// Toggle YOLO (Shift-Tab)
+		ToggleYolo: key.NewBinding(
+			key.WithKeys(core.KeyShiftTab),
+			key.WithHelp(core.KeyShiftTab, core.HelpYolo),
 		),
 	}
 }

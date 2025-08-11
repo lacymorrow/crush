@@ -11,17 +11,17 @@ import (
 	"strings"
 	"time"
 
-    "github.com/charmbracelet/catwalk/pkg/catwalk"
-    "github.com/lacymorrow/lash/internal/csync"
-    "github.com/lacymorrow/lash/internal/env"
+	"github.com/charmbracelet/catwalk/pkg/catwalk"
+	"github.com/lacymorrow/lash/internal/csync"
+	"github.com/lacymorrow/lash/internal/env"
 	"github.com/tidwall/sjson"
 )
 
 const (
-    // appName determines the base name of the configuration file looked up by the loader
-    // e.g. it will search for "crush.json" and ".crush.json" in the working directory
-    appName              = "crush"
-    defaultDataDirectory = ".lash"
+	// appName determines the base name of the configuration file looked up by the loader
+	// e.g. it will search for "crush.json" and ".crush.json" in the working directory
+	appName              = "crush"
+	defaultDataDirectory = ".lash"
 )
 
 var defaultContextPaths = []string{
@@ -32,8 +32,8 @@ var defaultContextPaths = []string{
 	"CLAUDE.local.md",
 	"GEMINI.md",
 	"gemini.md",
-    "lash.md",
-    "lash.local.md",
+	"lash.md",
+	"lash.local.md",
 	"Crush.md",
 	"Crush.local.md",
 	"CRUSH.md",
@@ -109,7 +109,7 @@ type MCPConfig struct {
 	Command  string            `json:"command,omitempty" jsonschema:"description=Command to execute for stdio MCP servers,example=npx"`
 	Env      map[string]string `json:"env,omitempty" jsonschema:"description=Environment variables to set for the MCP server"`
 	Args     []string          `json:"args,omitempty" jsonschema:"description=Arguments to pass to the MCP server command"`
-	Type     MCPType           `json:"type" jsonschema:"required,description=Type of MCP connection,enum=stdio,enum=sse,enum=http,default=stdio"`
+	Type     MCPType           `json:"type,omitempty" jsonschema:"description=Type of MCP connection,enum=stdio,enum=sse,enum=http,default=stdio"`
 	URL      string            `json:"url,omitempty" jsonschema:"description=URL for HTTP or SSE MCP servers,format=uri,example=http://localhost:3000/mcp"`
 	Disabled bool              `json:"disabled,omitempty" jsonschema:"description=Whether this MCP server is disabled,default=false"`
 
@@ -154,7 +154,7 @@ type Options struct {
 	Debug                bool        `json:"debug,omitempty" jsonschema:"description=Enable debug logging,default=false"`
 	DebugLSP             bool        `json:"debug_lsp,omitempty" jsonschema:"description=Enable debug logging for LSP servers,default=false"`
 	DisableAutoSummarize bool        `json:"disable_auto_summarize,omitempty" jsonschema:"description=Disable automatic conversation summarization,default=false"`
-    DataDirectory        string      `json:"data_directory,omitempty" jsonschema:"description=Directory for storing application data (relative to working directory),default=.lash,example=.lash"` // Relative to the cwd
+	DataDirectory        string      `json:"data_directory,omitempty" jsonschema:"description=Directory for storing application data (relative to working directory),default=.lash,example=.lash"` // Relative to the cwd
 }
 
 type MCPs map[string]MCPConfig

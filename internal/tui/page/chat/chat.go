@@ -942,31 +942,51 @@ func (p *chatPage) Help() help.KeyMap {
 			globalBindings = append(globalBindings, tabKey)
 		}
 		commandsBinding := key.NewBinding(
-			key.WithKeys("ctrl+p"),
-			key.WithHelp("ctrl+p", "commands"),
+			key.WithKeys(core.KeyCtrlP),
+			key.WithHelp(core.KeyCtrlP, core.HelpCommands),
 		)
 		helpBinding := key.NewBinding(
-			key.WithKeys("ctrl+g"),
-			key.WithHelp("ctrl+g", "more"),
+			key.WithKeys(core.KeyCtrlG),
+			key.WithHelp(core.KeyCtrlG, core.HelpMore),
 		)
 		globalBindings = append(globalBindings, commandsBinding)
 		globalBindings = append(globalBindings,
 			key.NewBinding(
-				key.WithKeys("ctrl+s"),
-				key.WithHelp("ctrl+s", "sessions"),
+				key.WithKeys(core.KeyCtrlS),
+				key.WithHelp(core.KeyCtrlS, core.HelpSessions),
 			),
 		)
 		if p.session.ID != "" {
 			globalBindings = append(globalBindings,
 				key.NewBinding(
-					key.WithKeys("ctrl+n"),
-					key.WithHelp("ctrl+n", "new sessions"),
+					key.WithKeys(core.KeyCtrlN),
+					key.WithHelp(core.KeyCtrlN, core.HelpNewSessions),
 				))
 		}
-		shortList = append(shortList,
-			// Commands
-			commandsBinding,
+		// Add global toggles and actions to full help
+		globalBindings = append(globalBindings,
+			key.NewBinding(
+				key.WithKeys(core.KeyCtrlC),
+				key.WithHelp(core.KeyCtrlC, core.HelpQuit),
+			),
+			key.NewBinding(
+				key.WithKeys(core.KeyCtrlZ),
+				key.WithHelp(core.KeyCtrlZ, core.HelpSuspend),
+			),
+			key.NewBinding(
+				key.WithKeys(core.KeyCtrlSpace),
+				key.WithHelp(core.KeyCtrlSpace, core.HelpMode),
+			),
+			key.NewBinding(
+				key.WithKeys(core.KeyShiftTab),
+				key.WithHelp(core.KeyShiftTab, core.HelpAutoConfirm),
+			),
+			key.NewBinding(
+				key.WithKeys(core.KeyCtrlY),
+				key.WithHelp(core.KeyCtrlY, core.HelpYolo),
+			),
 		)
+		// Commands is omitted from short help; available under More
 		fullList = append(fullList, globalBindings)
 
 		switch p.focusedPane {
@@ -1025,7 +1045,6 @@ func (p *chatPage) Help() help.KeyMap {
 				key.WithKeys("shift+enter", "ctrl+j"),
 				key.WithHelp("shift+enter", "newline"),
 			)
-			shortList = append(shortList, newLineBinding)
 			fullList = append(fullList,
 				[]key.Binding{
 					newLineBinding,
@@ -1073,8 +1092,9 @@ func (p *chatPage) Help() help.KeyMap {
 
 		// Add compact mode toggles only (remove ctrl+c from short help to keep it concise)
 		shortList = append(shortList,
-			key.NewBinding(key.WithKeys("ctrl+space"), key.WithHelp("ctrl+space", "mode")),
-			key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "auto-confirm")),
+			key.NewBinding(key.WithKeys(core.KeyCtrlSpace), key.WithHelp(core.KeyCtrlSpace, core.HelpMode)),
+			key.NewBinding(key.WithKeys(core.KeyShiftTab), key.WithHelp(core.KeyShiftTab, core.HelpAutoConfirm)),
+			key.NewBinding(key.WithKeys(core.KeyCtrlY), key.WithHelp(core.KeyCtrlY, core.HelpYolo)),
 		)
 	}
 

@@ -15,10 +15,10 @@ import (
 	"strings"
 	"sync"
 
-    "github.com/charmbracelet/catwalk/pkg/catwalk"
-    "github.com/lacymorrow/lash/internal/csync"
-    "github.com/lacymorrow/lash/internal/env"
-    "github.com/lacymorrow/lash/internal/log"
+	"github.com/charmbracelet/catwalk/pkg/catwalk"
+	"github.com/lacymorrow/lash/internal/csync"
+	"github.com/lacymorrow/lash/internal/env"
+	"github.com/lacymorrow/lash/internal/log"
 )
 
 const defaultCatwalkURL = "https://catwalk.charm.sh"
@@ -324,6 +324,22 @@ func (c *Config) setDefaults(workingDir string) {
 	if c.MCP == nil {
 		c.MCP = make(map[string]MCPConfig)
 	}
+	// Infer MCP types when omitted
+	for name, m := range c.MCP {
+		if m.Type == "" {
+			inferred := inferMCPType(m)
+			if inferred == "" {
+				// leave empty to be handled later; but prefer stdio if command given
+				if m.Command != "" {
+					inferred = MCPStdio
+				} else if m.URL != "" {
+					inferred = MCPHttp
+				}
+			}
+			m.Type = inferred
+			c.MCP[name] = m
+		}
+	}
 	if c.LSP == nil {
 		c.LSP = make(map[string]LSPConfig)
 	}
@@ -341,7 +357,7 @@ func (c *Config) setDefaults(workingDir string) {
 		c.Lash.Mode = "Auto"
 	}
 	if c.Lash.Safety.ConfirmAgentExec == nil {
-		v := true
+		v := false
 		c.Lash.Safety.ConfirmAgentExec = &v
 	}
 
@@ -349,6 +365,32 @@ func (c *Config) setDefaults(workingDir string) {
 	c.Options.ContextPaths = append(defaultContextPaths, c.Options.ContextPaths...)
 	slices.Sort(c.Options.ContextPaths)
 	c.Options.ContextPaths = slices.Compact(c.Options.ContextPaths)
+}
+
+// inferMCPType returns the MCP transport type based on provided fields.
+// Rules:
+//   - If Command is set, assume stdio
+//   - Else if URL is set, default http
+//   - If headers contain Accept: text/event-stream or URL path contains "/sse",
+//     then sse
+func inferMCPType(m MCPConfig) MCPType {
+	if strings.TrimSpace(m.Command) != "" {
+		return MCPStdio
+	}
+	if strings.TrimSpace(m.URL) == "" {
+		return ""
+	}
+	// Detect SSE hints via headers
+	for k, v := range m.Headers {
+		if strings.EqualFold(k, "Accept") && strings.Contains(strings.ToLower(v), "text/event-stream") {
+			return MCPSse
+		}
+	}
+	// Detect SSE via URL hint
+	if strings.Contains(strings.ToLower(m.URL), "/sse") {
+		return MCPSse
+	}
+	return MCPHttp
 }
 
 func (c *Config) defaultModelSelection(knownProviders []catwalk.Provider) (largeModel SelectedModel, smallModel SelectedModel, err error) {
