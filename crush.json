@@ -4,5 +4,19 @@
     "Go": {
       "command": "gopls"
     }
+  },
+  "mcp": {
+    "alpaca": {
+      "type": "stdio",
+      "command": "/Users/lacymorrow/repo/alpaca-mcp-server/myvenv/bin/python",
+      "args": [
+        "/Users/lacymorrow/repo/alpaca-mcp-server/alpaca_mcp_server.py"
+      ],
+      "env": {
+        "ALPACA_API_KEY": "AKY9SX8LHXMCM5GCP7P3",
+        "ALPACA_SECRET_KEY": "iZDVh82xzDqV13jrMnTWjTW2SagFZb0iwIU3NVfQ",
+        "ALPACA_PAPER_TRADE": "False"
+      }
+    }
   }
 }
