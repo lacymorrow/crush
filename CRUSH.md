@@ -6,9 +6,11 @@
 - **Test**: `task test` or `go test ./...` (run single test: `go test ./internal/llm/prompt -run TestGetContextFromPaths`)
 - **Update Golden Files**: `go test ./... -update` (regenerates .golden files when test output changes)
   - Update specific package: `go test ./internal/tui/components/core -update` (in this case, we're updating "core")
-- **Lint**: `task lint-fix`
+- **Lint**: `task lint-fix` (with auto-fix) or `task lint` (check only)
 - **Format**: `task fmt` (gofumpt -w .)
 - **Dev**: `task dev` (runs with profiling enabled)
+- **Schema**: `task schema` (generates JSON schema for configuration)
+- **Profiling**: `task profile:cpu`, `task profile:heap`, `task profile:allocs` (requires dev server running)
 
 ## Code Style Guidelines
 
