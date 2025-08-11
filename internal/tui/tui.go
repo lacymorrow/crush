@@ -80,6 +80,26 @@ type appModel struct {
 // ActiveMode returns the current mode string (Shell/Agent/Auto)
 func (a *appModel) ActiveMode() string { return a.activeMode }
 
+// renderModeBadge returns a colored/icon badge for the given mode without a prefix.
+func (a *appModel) renderModeBadge(mode string) string {
+	t := styles.CurrentTheme()
+	base := t.S().Base.Bold(true)
+	switch mode {
+	case "Shell":
+		icon := t.S().Base.Foreground(t.Secondary).Render("▌")
+		label := base.Foreground(t.Secondary).Render("Shell")
+		return lipgloss.JoinHorizontal(lipgloss.Left, icon, " ", label)
+	case "Agent":
+		icon := t.S().Base.Foreground(t.Accent).Render("▌")
+		label := base.Foreground(t.Accent).Render("Agent")
+		return lipgloss.JoinHorizontal(lipgloss.Left, icon, " ", label)
+	default: // Auto
+		icon := t.S().Base.Foreground(t.Primary).Render("▌")
+		label := base.Foreground(t.Primary).Render("Auto ")
+		return lipgloss.JoinHorizontal(lipgloss.Left, icon, " ", label)
+	}
+}
+
 // Init initializes the application model and returns initial commands.
 func (a *appModel) Init() tea.Cmd {
 	var cmds []tea.Cmd
@@ -92,13 +112,11 @@ func (a *appModel) Init() tea.Cmd {
 
 	cmds = append(cmds, tea.EnableMouseAllMotion)
 
-	// Initialize mode from persisted config if present
-	if cfg := config.Get(); cfg != nil && cfg.Lash != nil && cfg.Lash.Mode != "" {
-		a.activeMode = cfg.Lash.Mode
-		a.app.Mode = a.activeMode
-	}
+	// Initialize mode from config helper
+	a.activeMode = config.Get().ActiveMode()
+	a.app.Mode = a.activeMode
 	// Always show initial info on launch
-	a.status.SetLeft("Mode: " + a.activeMode)
+	a.status.SetLeft(a.renderModeBadge(a.activeMode))
 
 	return tea.Batch(cmds...)
 }
@@ -422,13 +440,10 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 		default:
 			a.activeMode = "Shell"
 		}
-		a.status.SetLeft("Mode: " + a.activeMode)
+		a.status.SetLeft(a.renderModeBadge(a.activeMode))
 		a.app.Mode = a.activeMode
-		// Persist last selected mode
-		if cfg := config.Get(); cfg != nil {
-			cfg.Lash.Mode = a.activeMode
-			_ = cfg.SetConfigField("lash.mode", a.activeMode)
-		}
+		// Persist last selected mode using config helper
+		_ = config.Get().SetActiveMode(a.activeMode)
 		return a.handleWindowResize(a.wWidth, a.wHeight)
 	case key.Matches(msg, a.keyMap.ToggleAutoConfirm):
 		// Toggle Lash safety confirm flag at runtime and persist to config data file
@@ -593,7 +608,7 @@ func New(app *app.App) tea.Model {
 		dialog:      dialogs.NewDialogCmp(),
 		completions: completions.New(),
 
-		activeMode: "Shell",
+		activeMode: "Auto",
 	}
 	// Register a minimal accessor for other components
 	util.RegisterAppModel(model)

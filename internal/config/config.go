@@ -142,7 +142,7 @@ type LashSafety struct {
 // LashConfig is the optional Lash-specific configuration namespace.
 type LashConfig struct {
 	// Mode persists the last selected app mode: Shell, Agent, or Auto
-	Mode   string     `json:"mode,omitempty" jsonschema:"description=Last selected app mode (Shell, Agent, or Auto),enum=Shell,enum=Agent,enum=Auto,default=Shell"`
+	Mode   string     `json:"mode,omitempty" jsonschema:"description=Last selected app mode (Shell, Agent, or Auto),enum=Shell,enum=Agent,enum=Auto,default=Auto"`
 	Safety LashSafety `json:"safety,omitempty" jsonschema:"description=Lash-specific safety options"`
 }
 
@@ -288,6 +288,29 @@ type Config struct {
 
 func (c *Config) WorkingDir() string {
 	return c.workingDir
+}
+
+// ActiveMode returns the persisted mode or "Auto" when unset.
+func (c *Config) ActiveMode() string {
+	if c == nil {
+		return "Auto"
+	}
+	if c.Lash == nil {
+		return "Auto"
+	}
+	if strings.TrimSpace(c.Lash.Mode) == "" {
+		return "Auto"
+	}
+	return c.Lash.Mode
+}
+
+// SetActiveMode persists the given mode under lash.mode and updates in-memory state.
+func (c *Config) SetActiveMode(mode string) error {
+	if c.Lash == nil {
+		c.Lash = &LashConfig{}
+	}
+	c.Lash.Mode = mode
+	return c.SetConfigField("lash.mode", mode)
 }
 
 func (c *Config) EnabledProviders() []ProviderConfig {
