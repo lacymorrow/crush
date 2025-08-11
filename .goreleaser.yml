@@ -4,21 +4,8 @@ version: 2
 
 project_name: lash
 
-includes:
-  # Removed Charm-specific includes for notarization; add your own if needed.
-
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
-  license: "FSL-1.1-MIT"
-  homepage: "https://github.com/lacymorrow/lash"
-  description: "Lash: terminal-based AI assistant for developers."
-  maintainers:
-    - "lacymorrow <dev@lacymorrow.com>"
-
-nightly:
-  publish_release: true
-  keep_single_release: true
-  version_template: "{{ incminor .Version }}-nightly"
 
 snapshot:
   version_template: "0.0.0-{{ .Timestamp }}"
@@ -147,12 +134,7 @@ aurs:
       mkdir -pv "${pkgdir}/usr/share/doc/lash/"
       install -Dm644 README* "${pkgdir}/usr/share/doc/crush/"
 
-furies:
-  - disable: "{{ .IsNightly }}"
-    account: ""
-    secret_name: FURY_TOKEN
-
-brews:
+homebrew_taps:
   - repository:
       owner: lacymorrow
       name: homebrew-tap
@@ -170,12 +152,6 @@ scoops:
       name: scoop-bucket
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
 
-npms:
-  - name: "@lacymorrow/lash"
-    repository: "git+https://github.com/lacymorrow/lash.git"
-    bugs: https://github.com/lacymorrow/lash/issues
-    access: public
-
 nfpms:
   - formats:
       - apk
@@ -183,6 +159,10 @@ nfpms:
       - rpm
       - archlinux
     file_name_template: "{{ .ConventionalFileName }}"
+    maintainer: "lacymorrow <dev@lacymorrow.com>"
+    description: "Lash: terminal-based AI assistant for developers."
+    homepage: "https://github.com/lacymorrow/lash"
+    license: "FSL-1.1-MIT"
     contents:
       - src: ./completions/lash.bash
         dst: /etc/bash_completion.d/lash
@@ -239,7 +219,6 @@ winget:
       pull_request:
         enabled: true
         draft: false
-        check_boxes: true
         base:
           owner: microsoft
           name: winget-pkgs
@@ -247,7 +226,6 @@ winget:
 
 changelog:
   sort: asc
-  disable: "{{ .IsNightly }}"
   use: github
   filters:
     exclude:
@@ -290,4 +268,3 @@ changelog:
 
 release:
   prerelease: auto
-  footer: {}

@@ -1,9 +1,9 @@
-# Crush
+# Lash
 
 <p align="center">
     <a href="https://stuff.charm.sh/crush/charm-crush.png"><img width="450" alt="Charm Crush Logo" src="https://github.com/user-attachments/assets/adc1a6f4-b284-4603-836c-59038caa2e8b" /></a><br />
-    <a href="https://github.com/charmbracelet/crush/releases"><img src="https://img.shields.io/github/release/charmbracelet/crush" alt="Latest Release"></a>
-    <a href="https://github.com/charmbracelet/crush/actions"><img src="https://github.com/charmbracelet/crush/workflows/build/badge.svg" alt="Build Status"></a>
+    <a href="https://github.com/lacymorrow/lash/releases"><img src="https://img.shields.io/github/release/lacymorrow/lash" alt="Latest Release"></a>
+    <a href="https://github.com/lacymorrow/lash/actions"><img src="https://github.com/lacymorrow/lash/workflows/build/badge.svg" alt="Build Status"></a>
 </p>
 
 <p align="center">Your new coding bestie, now available in your favourite terminal.<br />Your tools, your code, and your workflows, wired into your LLM of choice.</p>
@@ -70,10 +70,14 @@ nix-shell -p '(import <nur> { pkgs = import <nixpkgs> {}; }).repos.charmbracelet
 <summary><strong>Debian/Ubuntu</strong></summary>
 
 ```bash
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
-echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
-sudo apt update && sudo apt install crush
+# Download .deb package from GitHub releases
+wget https://github.com/lacymorrow/lash/releases/latest/download/lash_Linux_x86_64.deb
+sudo dpkg -i lash_Linux_x86_64.deb
+
+# Or download and extract binary directly
+wget https://github.com/lacymorrow/lash/releases/latest/download/lash_Linux_x86_64.tar.gz
+tar -xzf lash_Linux_x86_64.tar.gz
+sudo mv lash/lash /usr/local/bin/
 ```
 
 </details>
@@ -98,16 +102,16 @@ Or, download it:
 - [Packages][releases] are available in Debian and RPM formats
 - [Binaries][releases] are available for Linux, macOS, Windows, FreeBSD, OpenBSD, and NetBSD
 
-[releases]: https://github.com/charmbracelet/crush/releases
+[releases]: https://github.com/lacymorrow/lash/releases
 
 Or just install it with Go:
 
 ```
-go install github.com/charmbracelet/crush@latest
+go install github.com/lacymorrow/lash@latest
 ```
 
 > [!WARNING]
-> Productivity may increase when using Crush and you may find yourself nerd
+> Productivity may increase when using Lash and you may find yourself nerd
 > sniped when first using the application. If the symptoms persist, join the
 > [Discord][discord] and nerd snipe the rest of us.
 
