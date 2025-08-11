@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/charmbracelet/crush/internal/db"
-	"github.com/charmbracelet/crush/internal/pubsub"
+    "github.com/lacymorrow/lash/internal/db"
+    "github.com/lacymorrow/lash/internal/pubsub"
 	"github.com/google/uuid"
 )
 

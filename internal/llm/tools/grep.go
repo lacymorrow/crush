@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/crush/internal/fsext"
+    "github.com/lacymorrow/lash/internal/fsext"
 )
 
 // regexCache provides thread-safe caching of compiled regex patterns
@@ -127,7 +127,7 @@ LIMITATIONS:
 
 IGNORE FILE SUPPORT:
 - Respects .gitignore patterns to skip ignored files and directories
-- Respects .crushignore patterns for additional ignore rules
+- Respects .lashignore patterns for additional ignore rules
 - Both ignore files are automatically detected in the search root directory
 
 CROSS-PLATFORM NOTES:
@@ -282,7 +282,7 @@ func searchWithRipgrep(ctx context.Context, pattern, path, include string) ([]gr
 	cmd.Args = append(
 		cmd.Args,
 		"--ignore-file", filepath.Join(path, ".gitignore"),
-		"--ignore-file", filepath.Join(path, ".crushignore"),
+        "--ignore-file", filepath.Join(path, ".lashignore"),
 	)
 
 	output, err := cmd.Output()

@@ -7,8 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/v2/spinner"
 	"github.com/charmbracelet/bubbles/v2/textinput"
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/crush/internal/config"
-	"github.com/charmbracelet/crush/internal/tui/styles"
+    "github.com/lacymorrow/lash/internal/config"
+    "github.com/lacymorrow/lash/internal/tui/styles"
 	"github.com/charmbracelet/lipgloss/v2"
 )
 

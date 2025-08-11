@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/charmbracelet/crush/internal/fsext"
+    "github.com/lacymorrow/lash/internal/fsext"
 )
 
 const (

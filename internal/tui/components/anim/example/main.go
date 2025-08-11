@@ -6,8 +6,8 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-	anim "github.com/charmbracelet/crush/internal/tui/components/anim"
-	"github.com/charmbracelet/crush/internal/tui/styles"
+    anim "github.com/lacymorrow/lash/internal/tui/components/anim"
+    "github.com/lacymorrow/lash/internal/tui/styles"
 	"github.com/charmbracelet/lipgloss/v2"
 )
 

@@ -27,7 +27,7 @@ func SkipHidden(path string) bool {
 	}
 
 	commonIgnoredDirs := map[string]bool{
-		".crush":           true,
+        ".lash":           true,
 		"node_modules":     true,
 		"vendor":           true,
 		"dist":             true,
@@ -77,7 +77,7 @@ func NewFastGlobWalker(searchPath string) *FastGlobWalker {
 	}
 
 	// Load crushignore if it exists
-	crushignorePath := filepath.Join(searchPath, ".crushignore")
+    crushignorePath := filepath.Join(searchPath, ".lashignore")
 	if _, err := os.Stat(crushignorePath); err == nil {
 		if ci, err := ignore.CompileIgnoreFile(crushignorePath); err == nil {
 			walker.crushignore = ci

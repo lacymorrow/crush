@@ -7,12 +7,12 @@ import (
 	"log/slog"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/crush/internal/app"
-	"github.com/charmbracelet/crush/internal/config"
-	"github.com/charmbracelet/crush/internal/db"
-	"github.com/charmbracelet/crush/internal/tui"
-	"github.com/charmbracelet/crush/internal/version"
+    tea "github.com/charmbracelet/bubbletea/v2"
+    "github.com/lacymorrow/lash/internal/app"
+    "github.com/lacymorrow/lash/internal/config"
+    "github.com/lacymorrow/lash/internal/db"
+    "github.com/lacymorrow/lash/internal/tui"
+    "github.com/lacymorrow/lash/internal/version"
 	"github.com/charmbracelet/fang"
 	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
@@ -29,29 +29,29 @@ func init() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "crush",
+    Use:   "lash",
 	Short: "Lacy Shell — Terminal-based AI assistant for software development",
 	Long: `Lacy Shell is a powerful terminal-based AI assistant that helps with software development tasks.
 It provides an interactive chat interface with AI capabilities, code analysis, and LSP integration
 to assist developers in writing, debugging, and understanding code directly from the terminal.`,
 	Example: `
 # Run in interactive mode
-crush
+lash
 
 # Run with debug logging
-crush -d
+lash -d
 
 # Run with debug logging in a specific directory
-crush -d -c /path/to/project
+lash -d -c /path/to/project
 
 # Print version
-crush -v
+lash -v
 
 # Run a single non-interactive prompt
-crush run "Explain the use of context in Go"
+lash run "Explain the use of context in Go"
 
 # Run in dangerous mode (auto-accept all permissions)
-crush -y
+lash -y
   `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		app, err := setupApp(cmd)

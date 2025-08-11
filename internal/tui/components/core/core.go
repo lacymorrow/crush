@@ -7,10 +7,10 @@ import (
 	"github.com/alecthomas/chroma/v2"
 	"github.com/charmbracelet/bubbles/v2/help"
 	"github.com/charmbracelet/bubbles/v2/key"
-	"github.com/charmbracelet/crush/internal/tui/exp/diffview"
-	"github.com/charmbracelet/crush/internal/tui/styles"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/lacymorrow/lash/internal/tui/exp/diffview"
+	"github.com/lacymorrow/lash/internal/tui/styles"
 )
 
 type KeyMapHelp interface {
@@ -198,7 +198,7 @@ func SelectableButtonsVertical(buttons []ButtonOpts, spacing int) string {
 func DiffFormatter() *diffview.DiffView {
 	t := styles.CurrentTheme()
 	formatDiff := diffview.New()
-	style := chroma.MustNewStyle("crush", styles.GetChromaTheme())
+	style := chroma.MustNewStyle("lash", styles.GetChromaTheme())
 	diff := formatDiff.ChromaStyle(style).Style(t.S().Diff).TabWidth(4)
 	return diff
 }

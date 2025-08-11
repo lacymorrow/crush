@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/bubbles/v2/textinput"
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/crush/internal/tui/components/core/layout"
-	"github.com/charmbracelet/crush/internal/tui/styles"
+    "github.com/lacymorrow/lash/internal/tui/components/core/layout"
+    "github.com/lacymorrow/lash/internal/tui/styles"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/sahilm/fuzzy"
 )

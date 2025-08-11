@@ -5,7 +5,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/crush/internal/app"
+    "github.com/lacymorrow/lash/internal/app"
 )
 
 type Cursor interface {

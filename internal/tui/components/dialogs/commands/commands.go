@@ -9,14 +9,14 @@ import (
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
 	"github.com/charmbracelet/lipgloss/v2"
 
-	"github.com/charmbracelet/crush/internal/config"
-	"github.com/charmbracelet/crush/internal/llm/prompt"
-	"github.com/charmbracelet/crush/internal/tui/components/chat"
-	"github.com/charmbracelet/crush/internal/tui/components/core"
-	"github.com/charmbracelet/crush/internal/tui/components/dialogs"
-	"github.com/charmbracelet/crush/internal/tui/exp/list"
-	"github.com/charmbracelet/crush/internal/tui/styles"
-	"github.com/charmbracelet/crush/internal/tui/util"
+    "github.com/lacymorrow/lash/internal/config"
+    "github.com/lacymorrow/lash/internal/llm/prompt"
+    "github.com/lacymorrow/lash/internal/tui/components/chat"
+    "github.com/lacymorrow/lash/internal/tui/components/core"
+    "github.com/lacymorrow/lash/internal/tui/components/dialogs"
+    "github.com/lacymorrow/lash/internal/tui/exp/list"
+    "github.com/lacymorrow/lash/internal/tui/styles"
+    "github.com/lacymorrow/lash/internal/tui/util"
 )
 
 const (

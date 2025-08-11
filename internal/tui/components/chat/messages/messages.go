@@ -15,14 +15,14 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/atotto/clipboard"
-	"github.com/charmbracelet/crush/internal/config"
-	"github.com/charmbracelet/crush/internal/message"
-	"github.com/charmbracelet/crush/internal/tui/components/anim"
-	"github.com/charmbracelet/crush/internal/tui/components/core"
-	"github.com/charmbracelet/crush/internal/tui/components/core/layout"
-	"github.com/charmbracelet/crush/internal/tui/exp/list"
-	"github.com/charmbracelet/crush/internal/tui/styles"
-	"github.com/charmbracelet/crush/internal/tui/util"
+    "github.com/lacymorrow/lash/internal/config"
+    "github.com/lacymorrow/lash/internal/message"
+    "github.com/lacymorrow/lash/internal/tui/components/anim"
+    "github.com/lacymorrow/lash/internal/tui/components/core"
+    "github.com/lacymorrow/lash/internal/tui/components/core/layout"
+    "github.com/lacymorrow/lash/internal/tui/exp/list"
+    "github.com/lacymorrow/lash/internal/tui/styles"
+    "github.com/lacymorrow/lash/internal/tui/util"
 )
 
 // CopyKey is the key binding for copying message content to the clipboard.

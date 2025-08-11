@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/charmbracelet/crush/internal/log"
-	"github.com/charmbracelet/crush/internal/lsp"
-	"github.com/charmbracelet/crush/internal/lsp/watcher"
+    "github.com/lacymorrow/lash/internal/log"
+    "github.com/lacymorrow/lash/internal/lsp"
+    "github.com/lacymorrow/lash/internal/lsp/watcher"
 )
 
 // initLSPClients initializes LSP clients.

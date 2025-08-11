@@ -11,15 +11,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/catwalk/pkg/catwalk"
-	"github.com/charmbracelet/crush/internal/csync"
-	"github.com/charmbracelet/crush/internal/env"
+    "github.com/charmbracelet/catwalk/pkg/catwalk"
+    "github.com/lacymorrow/lash/internal/csync"
+    "github.com/lacymorrow/lash/internal/env"
 	"github.com/tidwall/sjson"
 )
 
 const (
-	appName              = "crush"
-	defaultDataDirectory = ".crush"
+    appName              = "lash"
+    defaultDataDirectory = ".lash"
 )
 
 var defaultContextPaths = []string{
@@ -30,8 +30,8 @@ var defaultContextPaths = []string{
 	"CLAUDE.local.md",
 	"GEMINI.md",
 	"gemini.md",
-	"crush.md",
-	"crush.local.md",
+    "lash.md",
+    "lash.local.md",
 	"Crush.md",
 	"Crush.local.md",
 	"CRUSH.md",
@@ -152,7 +152,7 @@ type Options struct {
 	Debug                bool        `json:"debug,omitempty" jsonschema:"description=Enable debug logging,default=false"`
 	DebugLSP             bool        `json:"debug_lsp,omitempty" jsonschema:"description=Enable debug logging for LSP servers,default=false"`
 	DisableAutoSummarize bool        `json:"disable_auto_summarize,omitempty" jsonschema:"description=Disable automatic conversation summarization,default=false"`
-	DataDirectory        string      `json:"data_directory,omitempty" jsonschema:"description=Directory for storing application data (relative to working directory),default=.crush,example=.crush"` // Relative to the cwd
+    DataDirectory        string      `json:"data_directory,omitempty" jsonschema:"description=Directory for storing application data (relative to working directory),default=.lash,example=.lash"` // Relative to the cwd
 }
 
 type MCPs map[string]MCPConfig
@@ -255,7 +255,7 @@ type Agent struct {
 	ContextPaths []string `json:"context_paths,omitempty"`
 }
 
-// Config holds the configuration for crush.
+// Config holds the configuration for lash.
 type Config struct {
 	Schema string `json:"$schema,omitempty"`
 

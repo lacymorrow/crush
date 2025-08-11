@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
-	"github.com/charmbracelet/crush/internal/csync"
-	"github.com/charmbracelet/crush/internal/env"
+    "github.com/lacymorrow/lash/internal/csync"
+    "github.com/lacymorrow/lash/internal/env"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,7 +48,7 @@ func TestConfig_setDefaults(t *testing.T) {
 	require.NotNil(t, cfg.Models)
 	require.NotNil(t, cfg.LSP)
 	require.NotNil(t, cfg.MCP)
-	require.Equal(t, filepath.Join("/tmp", ".crush"), cfg.Options.DataDirectory)
+    require.Equal(t, filepath.Join("/tmp", ".lash"), cfg.Options.DataDirectory)
 	for _, path := range defaultContextPaths {
 		require.Contains(t, cfg.Options.ContextPaths, path)
 	}

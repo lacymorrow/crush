@@ -21,7 +21,7 @@ func Connect(ctx context.Context, dataDir string) (*sql.DB, error) {
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
-	dbPath := filepath.Join(dataDir, "crush.db")
+    dbPath := filepath.Join(dataDir, "lash.db")
 	// Open the SQLite database
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {

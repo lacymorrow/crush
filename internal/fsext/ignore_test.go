@@ -22,8 +22,8 @@ func TestCrushIgnore(t *testing.T) {
 	require.NoError(t, os.WriteFile("test2.log", []byte("test"), 0o644))
 	require.NoError(t, os.WriteFile("test3.tmp", []byte("test"), 0o644))
 
-	// Create a .crushignore file that ignores .log files
-	require.NoError(t, os.WriteFile(".crushignore", []byte("*.log\n"), 0o644))
+    // Create a .lashignore file that ignores .log files
+    require.NoError(t, os.WriteFile(".lashignore", []byte("*.log\n"), 0o644))
 
 	dl := NewDirectoryLister(tempDir)
 	require.True(t, dl.shouldIgnore("test2.log", nil), ".log files should be ignored")

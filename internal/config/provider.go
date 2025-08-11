@@ -30,9 +30,9 @@ func providerCacheFileData() string {
 		return filepath.Join(xdgDataHome, appName, "providers.json")
 	}
 
-	// return the path to the main data directory
-	// for windows, it should be in `%LOCALAPPDATA%/crush/`
-	// for linux and macOS, it should be in `$HOME/.local/share/crush/`
+    // return the path to the main data directory
+    // for windows, it should be in `%LOCALAPPDATA%/lash/`
+    // for linux and macOS, it should be in `$HOME/.local/share/lash/`
 	if runtime.GOOS == "windows" {
 		localAppData := os.Getenv("LOCALAPPDATA")
 		if localAppData == "" {

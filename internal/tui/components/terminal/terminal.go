@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/crush/internal/app"
-	"github.com/charmbracelet/crush/internal/shell"
+	"github.com/lacymorrow/lash/internal/app"
+	"github.com/lacymorrow/lash/internal/shell"
 )
 
 // TerminalOutputMsg carries raw bytes from the PTY to the UI loop.

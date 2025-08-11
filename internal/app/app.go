@@ -10,20 +10,20 @@ import (
 	"sync"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/crush/internal/config"
-	"github.com/charmbracelet/crush/internal/csync"
-	"github.com/charmbracelet/crush/internal/db"
-	"github.com/charmbracelet/crush/internal/format"
-	"github.com/charmbracelet/crush/internal/history"
-	"github.com/charmbracelet/crush/internal/llm/agent"
-	"github.com/charmbracelet/crush/internal/log"
-	"github.com/charmbracelet/crush/internal/pubsub"
+    tea "github.com/charmbracelet/bubbletea/v2"
+    "github.com/lacymorrow/lash/internal/config"
+    "github.com/lacymorrow/lash/internal/csync"
+    "github.com/lacymorrow/lash/internal/db"
+    "github.com/lacymorrow/lash/internal/format"
+    "github.com/lacymorrow/lash/internal/history"
+    "github.com/lacymorrow/lash/internal/llm/agent"
+    "github.com/lacymorrow/lash/internal/log"
+    "github.com/lacymorrow/lash/internal/pubsub"
 
-	"github.com/charmbracelet/crush/internal/lsp"
-	"github.com/charmbracelet/crush/internal/message"
-	"github.com/charmbracelet/crush/internal/permission"
-	"github.com/charmbracelet/crush/internal/session"
+    "github.com/lacymorrow/lash/internal/lsp"
+    "github.com/lacymorrow/lash/internal/message"
+    "github.com/lacymorrow/lash/internal/permission"
+    "github.com/lacymorrow/lash/internal/session"
 )
 
 type App struct {

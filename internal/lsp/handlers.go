@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"github.com/charmbracelet/crush/internal/config"
+    "github.com/lacymorrow/lash/internal/config"
 
-	"github.com/charmbracelet/crush/internal/lsp/protocol"
-	"github.com/charmbracelet/crush/internal/lsp/util"
+    "github.com/lacymorrow/lash/internal/lsp/protocol"
+    "github.com/lacymorrow/lash/internal/lsp/util"
 )
 
 // Requests

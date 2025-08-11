@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/crush/internal/lsp/protocol"
+    "github.com/lacymorrow/lash/internal/lsp/protocol"
 )
 
 func DetectLanguageID(uri string) protocol.LanguageKind {
