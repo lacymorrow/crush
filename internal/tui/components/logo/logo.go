@@ -36,7 +36,6 @@ type Opts struct {
 // The compact argument determines whether it renders compact for the sidebar
 // or wider for the main pane.
 func Render(version string, compact bool, o Opts) string {
-	const charm = " Charm™"
 
 	fg := func(c color.Color, s string) string {
 		return lipgloss.NewStyle().Foreground(c).Render(s)
@@ -64,14 +63,16 @@ func Render(version string, compact bool, o Opts) string {
 	}
 	crush = b.String()
 
-	// Charm and version.
+	// Brand and version.
+	// Replace brand label from " Charm™" to " Lacy™ Shell"
+	const lacyBrand = " Lacy™ Shell"
 	metaRowGap := 1
-	maxVersionWidth := crushWidth - lipgloss.Width(charm) - metaRowGap
+	maxVersionWidth := crushWidth - lipgloss.Width(lacyBrand) - metaRowGap
 	version = ansi.Truncate(version, maxVersionWidth, "…") // truncate version if too long.
-	gap := max(0, crushWidth-lipgloss.Width(charm)-lipgloss.Width(version))
-	metaRow := fg(o.CharmColor, charm) + strings.Repeat(" ", gap) + fg(o.VersionColor, version)
+	gap := max(0, crushWidth-lipgloss.Width(lacyBrand)-lipgloss.Width(version))
+	metaRow := fg(o.CharmColor, lacyBrand) + strings.Repeat(" ", gap) + fg(o.VersionColor, version)
 
-	// Join the meta row and big Crush title.
+	// Join the meta row and big title art.
 	crush = strings.TrimSpace(metaRow + "\n" + crush)
 
 	// Narrow version.
@@ -116,13 +117,13 @@ func Render(version string, compact bool, o Opts) string {
 	return logo
 }
 
-// SmallRender renders a smaller version of the Crush logo, suitable for
+// SmallRender renders a smaller branded logo, suitable for
 // smaller windows or sidebar usage.
 func SmallRender(width int) string {
 	t := styles.CurrentTheme()
-	title := t.S().Base.Foreground(t.Secondary).Render("Charm™")
-	title = fmt.Sprintf("%s %s", title, styles.ApplyBoldForegroundGrad("Crush", t.Secondary, t.Primary))
-	remainingWidth := width - lipgloss.Width(title) - 1 // 1 for the space after "Crush"
+	title := t.S().Base.Foreground(t.Secondary).Render("Lacy™")
+	title = fmt.Sprintf("%s %s", title, styles.ApplyBoldForegroundGrad("Shell", t.Secondary, t.Primary))
+	remainingWidth := width - lipgloss.Width(title) - 1 // 1 for the space after the title
 	if remainingWidth > 0 {
 		lines := strings.Repeat("╱", remainingWidth)
 		title = fmt.Sprintf("%s %s", title, t.S().Base.Foreground(t.Primary).Render(lines))

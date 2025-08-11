@@ -67,6 +67,12 @@ type editorCmp struct {
 	currentQuery          string
 	completionsStartIndex int
 	isCompletionsOpen     bool
+
+	// Per-session input history
+	inputHistory map[string][]string // sessionID -> history entries (most recent at end)
+	historyIndex int                 // current index into history for active session, -1 means not in history selection
+	historyTemp  string              // the current unsent input before entering history navigation
+	inHistoryNav bool                // whether we are actively navigating history
 }
 
 var DeleteKeyMaps = DeleteAttachmentKeyMaps{
@@ -152,6 +158,21 @@ func (m *editorCmp) send() tea.Cmd {
 	case "exit", "quit":
 		m.textarea.Reset()
 		return util.CmdHandler(dialogs.OpenDialogMsg{Model: quit.NewQuitDialog()})
+	}
+
+	// Append to per-session history if non-empty and not a duplicate of the last entry
+	if value != "" {
+		if m.inputHistory == nil {
+			m.inputHistory = make(map[string][]string)
+		}
+		h := m.inputHistory[m.session.ID]
+		if len(h) == 0 || h[len(h)-1] != value {
+			m.inputHistory[m.session.ID] = append(h, value)
+		}
+		// Reset history navigation state after sending
+		m.inHistoryNav = false
+		m.historyIndex = -1
+		m.historyTemp = ""
 	}
 
 	m.textarea.Reset()
@@ -281,6 +302,52 @@ func (m *editorCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case m.isCompletionsOpen && curIdx <= m.completionsStartIndex:
 			cmds = append(cmds, util.CmdHandler(completions.CloseCompletionsMsg{}))
 		}
+
+		// History navigation: Up/Down
+		if msg.String() == "up" || msg.String() == "down" {
+			// Only handle when focused and not deleting attachments and not showing completions
+			if m.textarea.Focused() && !m.deleteMode && !m.isCompletionsOpen {
+				// initialize history map if needed
+				if m.inputHistory == nil {
+					m.inputHistory = make(map[string][]string)
+				}
+				history := m.inputHistory[m.session.ID]
+				if len(history) > 0 {
+					if msg.String() == "up" {
+						// Enter history nav only if at the top line to avoid interfering with multi-line editing
+						if !m.inHistoryNav && cur != nil && cur.Y == 0 {
+							m.inHistoryNav = true
+							m.historyTemp = m.textarea.Value()
+							m.historyIndex = len(history)
+						}
+						if m.inHistoryNav {
+							if m.historyIndex > 0 {
+								m.historyIndex--
+							}
+							m.textarea.SetValue(history[m.historyIndex])
+							m.textarea.MoveToEnd()
+							return m, nil
+						}
+					} else if msg.String() == "down" {
+						if m.inHistoryNav {
+							if m.historyIndex < len(history)-1 {
+								m.historyIndex++
+								m.textarea.SetValue(history[m.historyIndex])
+							} else {
+								// Exit history navigation and restore the temp content
+								m.inHistoryNav = false
+								m.historyIndex = -1
+								m.textarea.SetValue(m.historyTemp)
+								m.historyTemp = ""
+							}
+							m.textarea.MoveToEnd()
+							return m, nil
+						}
+					}
+				}
+			}
+		}
+
 		if key.Matches(msg, DeleteKeyMaps.AttachmentDeleteMode) {
 			m.deleteMode = true
 			return m, nil
@@ -532,6 +599,10 @@ func (c *editorCmp) Bindings() []key.Binding {
 // we need to move some functionality to the page level
 func (c *editorCmp) SetSession(session session.Session) tea.Cmd {
 	c.session = session
+	// Reset transient history navigation state on session switch
+	c.inHistoryNav = false
+	c.historyIndex = -1
+	c.historyTemp = ""
 	return nil
 }
 
@@ -582,6 +653,9 @@ func New(app *app.App) Editor {
 		app:      app,
 		textarea: ta,
 		keyMap:   DefaultEditorKeyMap(),
+		// history defaults
+		inputHistory: make(map[string][]string),
+		historyIndex: -1,
 	}
 	e.setEditorPrompt()
 
