@@ -1,4 +1,4 @@
-// Package logo renders a Crush wordmark in a stylized way.
+// Package logo renders a Lash wordmark in a stylized way.
 package logo
 
 import (
@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
-    "github.com/lacymorrow/lash/internal/tui/styles"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/exp/slice"
+	"github.com/lacymorrow/lash/internal/tui/styles"
 )
 
 // letterform represents a letterform. It can be stretched horizontally by
@@ -20,7 +20,7 @@ type letterform func(bool) string
 
 const diag = `╱`
 
-// Opts are the options for rendering the Crush title art.
+// Opts are the options for rendering the Lash title art.
 type Opts struct {
 	FieldColor   color.Color // diagonal lines
 	TitleColorA  color.Color // left gradient ramp point
@@ -30,7 +30,7 @@ type Opts struct {
 	Width        int         // width of the rendered logo, used for truncation
 }
 
-// Render renders the Crush logo. Set the argument to true to render the narrow
+// Render renders the Lash logo. Set the argument to true to render the narrow
 // version, intended for use in a sidebar.
 //
 // The compact argument determines whether it renders compact for the sidebar
@@ -44,9 +44,8 @@ func Render(version string, compact bool, o Opts) string {
 	// Title.
 	const spacing = 1
 	letterforms := []letterform{
-		letterC,
-		letterR,
-		letterU,
+		letterL,
+		letterA,
 		letterSStylized,
 		letterH,
 	}
@@ -55,33 +54,33 @@ func Render(version string, compact bool, o Opts) string {
 		stretchIndex = rand.IntN(len(letterforms))
 	}
 
-	crush := renderWord(spacing, stretchIndex, letterforms...)
-	crushWidth := lipgloss.Width(crush)
+	lash := renderWord(spacing, stretchIndex, letterforms...)
+	lashWidth := lipgloss.Width(lash)
 	b := new(strings.Builder)
-	for r := range strings.SplitSeq(crush, "\n") {
+	for r := range strings.SplitSeq(lash, "\n") {
 		fmt.Fprintln(b, styles.ApplyForegroundGrad(r, o.TitleColorA, o.TitleColorB))
 	}
-	crush = b.String()
+	lash = b.String()
 
 	// Brand and version.
 	// Replace brand label from " Charm™" to " Lacy™ Shell"
 	const lacyBrand = " Lacy™ Shell"
 	metaRowGap := 1
-	maxVersionWidth := crushWidth - lipgloss.Width(lacyBrand) - metaRowGap
+	maxVersionWidth := lashWidth - lipgloss.Width(lacyBrand) - metaRowGap
 	version = ansi.Truncate(version, maxVersionWidth, "…") // truncate version if too long.
-	gap := max(0, crushWidth-lipgloss.Width(lacyBrand)-lipgloss.Width(version))
+	gap := max(0, lashWidth-lipgloss.Width(lacyBrand)-lipgloss.Width(version))
 	metaRow := fg(o.CharmColor, lacyBrand) + strings.Repeat(" ", gap) + fg(o.VersionColor, version)
 
 	// Join the meta row and big title art.
-	crush = strings.TrimSpace(metaRow + "\n" + crush)
+	lash = strings.TrimSpace(metaRow + "\n" + lash)
 
 	// Narrow version.
 	if compact {
-		field := fg(o.FieldColor, strings.Repeat(diag, crushWidth))
-		return strings.Join([]string{field, field, crush, field, ""}, "\n")
+		field := fg(o.FieldColor, strings.Repeat(diag, lashWidth))
+		return strings.Join([]string{field, field, lash, field, ""}, "\n")
 	}
 
-	fieldHeight := lipgloss.Height(crush)
+	fieldHeight := lipgloss.Height(lash)
 
 	// Left field.
 	const leftWidth = 6
@@ -92,7 +91,7 @@ func Render(version string, compact bool, o Opts) string {
 	}
 
 	// Right field.
-	rightWidth := max(15, o.Width-crushWidth-leftWidth-2) // 2 for the gap.
+	rightWidth := max(15, o.Width-lashWidth-leftWidth-2) // 2 for the gap.
 	const stepDownAt = 0
 	rightField := new(strings.Builder)
 	for i := range fieldHeight {
@@ -105,7 +104,7 @@ func Render(version string, compact bool, o Opts) string {
 
 	// Return the wide version.
 	const hGap = " "
-	logo := lipgloss.JoinHorizontal(lipgloss.Top, leftField.String(), hGap, crush, hGap, rightField.String())
+	logo := lipgloss.JoinHorizontal(lipgloss.Top, leftField.String(), hGap, lash, hGap, rightField.String())
 	if o.Width > 0 {
 		// Truncate the logo to the specified width.
 		lines := strings.Split(logo, "\n")
@@ -184,6 +183,35 @@ func letterC(stretch bool) string {
 	)
 }
 
+// letterL renders the letter L in a stylized way. It takes a boolean to
+// determine whether to stretch the baseline.
+func letterL(stretch bool) string {
+	// Here's what we're making:
+	//
+	// █
+	// █
+	// ▀▀▀
+
+	side := heredoc.Doc(`
+        █
+        █
+    `)
+	baseline := heredoc.Doc(`
+
+
+        ▀
+    `)
+	return joinLetterform(
+		side,
+		stretchLetterformPart(baseline, letterformProps{
+			stretch:    stretch,
+			width:      3,
+			minStretch: 7,
+			maxStretch: 12,
+		}),
+	)
+}
+
 // letterH renders the letter H in a stylized way. It takes an integer that
 // determines how many cells to stretch the letter. If the stretch is less than
 // 1, it defaults to no stretching.
@@ -238,6 +266,42 @@ func letterR(stretch bool) string {
 		▄
 		▀
 	`)
+	return joinLetterform(
+		left,
+		stretchLetterformPart(center, letterformProps{
+			stretch:    stretch,
+			width:      3,
+			minStretch: 7,
+			maxStretch: 12,
+		}),
+		right,
+	)
+}
+
+// letterA renders the letter A in a stylized way. It takes a boolean to
+// determine whether to stretch the crossbar and peak.
+func letterA(stretch bool) string {
+	// Here's what we're making:
+	//
+	// ▄▀▀▀▄
+	// █▀▀▀█
+	// ▀   ▀
+
+	left := heredoc.Doc(`
+        ▄
+        █
+        ▀
+    `)
+	center := heredoc.Doc(`
+        ▀
+        ▀
+        
+    `)
+	right := heredoc.Doc(`
+        ▄
+        █
+        ▀
+    `)
 	return joinLetterform(
 		left,
 		stretchLetterformPart(center, letterformProps{

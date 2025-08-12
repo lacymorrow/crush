@@ -6,35 +6,26 @@
     <a href="https://github.com/lacymorrow/lash/actions"><img src="https://github.com/lacymorrow/lash/workflows/build/badge.svg" alt="Build Status"></a>
 </p>
 
-<p align="center">Your new coding bestie, now available in your favourite terminal.<br />Your tools, your code, and your workflows, wired into your LLM of choice.</p>
+Terminal-based AI assistant for developers. A login-shell-friendly fork of Charmbracelet Crush with Shell, Agent, and Auto modes, plus built-in MCP support.
 
-<p align="center"><img width="800" alt="Crush Demo" src="https://github.com/user-attachments/assets/58280caf-851b-470a-b6f7-d5c4ea8a1968" /></p>
-
-## Features
+### Features
 
 - **Multi-Model:** choose from a wide range of LLMs or add your own via OpenAI- or Anthropic-compatible APIs
 - **Flexible:** switch LLMs mid-session while preserving context
 - **Session-Based:** maintain multiple work sessions and contexts per project
-- **LSP-Enhanced:** Crush uses LSPs for additional context, just like you do
+- **LSP-Enhanced:** uses LSPs for additional context, just like you do
 - **Extensible:** add capabilities via MCPs (`http`, `stdio`, and `sse`)
-- **Works Everywhere:** first-class support in every terminal on macOS, Linux, Windows (PowerShell and WSL), FreeBSD, OpenBSD, and NetBSD
+- **Works Everywhere:** first-class support in terminals on macOS, Linux, and Windows (PowerShell and WSL)
+- **Modes:** Shell, Agent, and Auto routing (first run defaults to Auto)
 
-## Installation
+### Installation
 
-Use a package manager:
+Homebrew:
 
 ```bash
-# Homebrew
-brew install charmbracelet/tap/crush
-
-# NPM
-npm install -g @charmland/crush
-
-# Arch Linux (btw)
-yay -S crush-bin
-
-# Nix
-nix run github:numtide/nix-ai-tools#crush
+brew tap lacymorrow/tap
+brew install lacymorrow/tap/lash
+lash --version
 ```
 
 Windows users:
@@ -115,11 +106,10 @@ go install github.com/lacymorrow/lash@latest
 > sniped when first using the application. If the symptoms persist, join the
 > [Discord][discord] and nerd snipe the rest of us.
 
-## Getting Started
+### Getting Started
 
 The quickest way to get started is to grab an API key for your preferred
-provider such as Anthropic, OpenAI, Groq, or OpenRouter and just start
-Crush. You'll be prompted to enter your API key.
+provider such as Anthropic, OpenAI, Groq, or OpenRouter and run `lash`. You'll be prompted to enter your API key.
 
 That said, you can also set environment variables for preferred providers.
 
@@ -139,19 +129,13 @@ That said, you can also set environment variables for preferred providers.
 | `AZURE_OPENAI_API_KEY`     | Azure OpenAI models (optional when using Entra ID) |
 | `AZURE_OPENAI_API_VERSION` | Azure OpenAI models                                |
 
-### By the Way
+### Models Catalog
 
-Is there a provider you’d like to see in Crush? Is there an existing model that needs an update?
+Lash uses the Catwalk model catalog from the upstream project for defaults. You can override or add providers in your configuration.
 
-Crush’s default model listing is managed in [Catwalk](https://github.com/charmbracelet/catwalk), an community-supported, open source repository of Crush-compatible models, and you’re welcome to contribute.
+### Configuration
 
-<a href="https://github.com/charmbracelet/catwalk"><img width="174" height="174" alt="Catwalk Badge" src="https://github.com/user-attachments/assets/95b49515-fe82-4409-b10d-5beb0873787d" /></a>
-
-## Configuration
-
-Crush runs great with no configuration. That said, if you do need or want to
-customize Crush, configuration can be added either local to the project itself,
-or globally, with the following priority:
+Lash runs great with no configuration. If you do want to customize it, configuration follows the upstream file names for compatibility and is read with the following priority:
 
 1. `.crush.json`
 2. `crush.json`
@@ -166,20 +150,16 @@ Configuration itself is stored as a JSON object:
 }
 ```
 
-As an additional note, Crush also stores ephemeral data, such as application state, in one additional location:
+Lash stores ephemeral data, such as application state, in this location:
 
 ```bash
-# Unix
-$HOME/.local/share/crush/crush.json
-
-# Windows
-%LOCALAPPDATA%\crush\crush.json
+# Project-relative (default)
+./.lash/
 ```
 
 ### LSPs
 
-Crush can use LSPs for additional context to help inform its decisions, just
-like you would. LSPs can be added manually like so:
+Lash can use LSPs for additional context. LSPs can be added manually like so:
 
 ```json
 {
@@ -201,7 +181,7 @@ like you would. LSPs can be added manually like so:
 
 ### MCPs
 
-Crush also supports Model Context Protocol (MCP) servers through three
+Lash supports Model Context Protocol (MCP) servers through three
 transport types: `stdio` for command-line servers, `http` for HTTP endpoints,
 and `sse` for Server-Sent Events. Environment variable expansion is supported
 using `$(echo $VAR)` syntax.
@@ -238,19 +218,14 @@ using `$(echo $VAR)` syntax.
 
 ### Ignoring Files
 
-Crush respects `.gitignore` files by default, but you can also create a
-`.crushignore` file to specify additional files and directories that Crush
-should ignore. This is useful for excluding files that you want in version
-control but don't want Crush to consider when providing context.
+Lash respects `.gitignore` by default. You can also create a `.crushignore` file to specify additional files and directories that should be ignored when providing context.
 
 The `.crushignore` file uses the same syntax as `.gitignore` and can be placed
 in the root of your project or in subdirectories.
 
 ### Allowing Tools
 
-By default, Crush will ask you for permission before running tool calls. If
-you'd like, you can allow tools to be executed without prompting you for
-permissions. Use this with care.
+By default, Lash will ask you for permission before running tool calls. If you'd like, you can allow tools to be executed without prompting you for permissions. Use this with care.
 
 ```json
 {
@@ -267,8 +242,26 @@ permissions. Use this with care.
 }
 ```
 
-You can also skip all permission prompts entirely by running Crush with the
-`--yolo` flag. Be very, very careful with this feature.
+You can also skip all permission prompts entirely by running Lash with the `--yolo` flag (or setting `lash.yolo` in config). Be careful with this feature.
+
+### Timeouts
+
+To prevent requests or tool calls from hanging indefinitely, you can configure global caps under `options`:
+
+```json
+{
+  "$schema": "https://charm.land/crush.json",
+  "options": {
+    "request_timeout_seconds": 300,
+    "tool_call_timeout_seconds": 120
+  }
+}
+```
+
+- `request_timeout_seconds`: Maximum duration for a single agent request. When reached, the request is canceled.
+- `tool_call_timeout_seconds`: Maximum duration for each individual tool call. Tools with their own shorter timeouts still apply; this acts as a safety cap.
+
+Built-in tools like `bash`, `fetch`, `download`, and `sourcegraph` already enforce their own per-call timeouts; the global caps add an extra safeguard.
 
 ### Local Models
 
@@ -320,8 +313,7 @@ Local models can also be configured via OpenAI-compatible API. Here are two comm
 
 ### Custom Providers
 
-Crush supports custom provider configurations for both OpenAI-compatible and
-Anthropic-compatible APIs.
+Lash supports custom provider configurations for both OpenAI-compatible and Anthropic-compatible APIs.
 
 #### OpenAI-Compatible APIs
 
@@ -389,7 +381,7 @@ Custom Anthropic-compatible providers follow this format:
 
 ### Amazon Bedrock
 
-Crush currently supports running Anthropic models through Bedrock, with caching disabled.
+Lash supports running Anthropic models through Bedrock, with caching disabled.
 
 * A Bedrock provider will appear once you have AWS configured, i.e. `aws configure`
 * Crush also expects the `AWS_REGION` or `AWS_DEFAULT_REGION` to be set
@@ -429,9 +421,9 @@ To add specific models to the configuration, configure as such:
 }
 ```
 
-## A Note on Claude Max and GitHub Copilot
+### A Note on Claude Max and GitHub Copilot
 
-Crush only supports model providers through official, compliant APIs. We do not
+Lash only supports model providers through official, compliant APIs. We do not
 support or endorse any methods that rely on personal Claude Max and GitHub Copilot
 accounts or OAuth workarounds, which may violate Anthropic and Microsoft’s
 Terms of Service.
@@ -440,25 +432,24 @@ We’re committed to building sustainable, trusted integrations with model
 providers. If you’re a provider interested in working with us, 
 [reach out](mailto:vt100@charm.sh).
 
-## Logging
+### Logging
 
-Sometimes you need to look at logs. Luckily, Crush logs all sorts of
-stuff. Logs are stored in `./.crush/logs/crush.log` relative to the project.
+Logs are stored in `./.lash/logs/lash.log` relative to your project.
 
 The CLI also contains some helper commands to make perusing recent logs easier:
 
 ```bash
 # Print the last 1000 lines
-crush logs
+lash logs
 
 # Print the last 500 lines
-crush logs --tail 500
+lash logs --tail 500
 
 # Follow logs in real time
-crush logs --follow
+lash logs --follow
 ```
 
-Want more logging? Run `crush` with the `--debug` flag, or enable it in the
+Want more logging? Run `lash` with the `--debug` flag, or enable it in the
 config:
 
 ```json
@@ -471,26 +462,21 @@ config:
 }
 ```
 
-## Whatcha think?
+### Lash-specific Configuration
 
-We’d love to hear your thoughts on this project. Need help? We gotchu. You can find us on:
+Lash adds an optional `lash` namespace to configuration for mode and safety controls while remaining compatible with upstream `crush.json`:
 
-- [Twitter](https://twitter.com/charmcli)
-- [Discord][discord]
-- [Slack](https://charm.land/slack)
-- [The Fediverse](https://mastodon.social/@charmcli)
+```json
+{
+  "$schema": "https://charm.land/crush.json",
+  "lash": {
+    "mode": "Auto",
+    "yolo": false,
+    "safety": { "confirm_agent_exec": true }
+  }
+}
+```
 
-[discord]: https://charm.land/discord
+### License
 
-## License
-
-[FSL-1.1-MIT](https://github.com/charmbracelet/crush/raw/main/LICENSE)
-
----
-
-Part of [Charm](https://charm.land).
-
-<a href="https://charm.land/"><img alt="The Charm logo" width="400" src="https://stuff.charm.sh/charm-banner-next.jpg" /></a>
-
-<!--prettier-ignore-->
-Charm热爱开源 • Charm loves open source
+FSL-1.1-MIT (MIT Future). See `LICENSE`.

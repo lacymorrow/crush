@@ -3,6 +3,9 @@ package tui
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -221,8 +224,32 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Model: quit.NewQuitDialog(),
 		})
 	case commands.ToggleYoloModeMsg:
-		a.app.Permissions.SetSkipRequests(!a.app.Permissions.SkipRequests())
+		// Toggle YOLO skip mode
+		newSkip := !a.app.Permissions.SkipRequests()
+		a.app.Permissions.SetSkipRequests(newSkip)
 		a.status.SetLeft(a.renderLeftPrefix())
+
+		// Persist YOLO flag and also toggle auto-confirm to mirror YOLO state
+		cfg := config.Get()
+		if cfg.Lash == nil {
+			cfg.Lash = &config.LashConfig{}
+		}
+		_ = cfg.SetConfigField("lash.yolo", newSkip)
+		currentAllowed := []string{"bash", "bash:execute"}
+		if newSkip {
+			// Enable auto-confirm when YOLO is on
+			falseVal := false
+			cfg.Lash.Safety.ConfirmAgentExec = &falseVal
+			_ = cfg.SetConfigField("lash.safety.confirm_agent_exec", false)
+			a.app.Permissions.SetAllowedTools(currentAllowed)
+			return a, util.ReportInfo("YOLO enabled (auto-confirm on)")
+		}
+		// Disable auto-confirm when YOLO is off
+		trueVal := true
+		cfg.Lash.Safety.ConfirmAgentExec = &trueVal
+		_ = cfg.SetConfigField("lash.safety.confirm_agent_exec", true)
+		a.app.Permissions.SetAllowedTools([]string{})
+		return a, util.ReportInfo("YOLO disabled (auto-confirm off)")
 	case commands.ToggleHelpMsg:
 		a.status.ToggleFullHelp()
 		a.showingFullHelp = !a.showingFullHelp
@@ -253,6 +280,32 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, util.CmdHandler(dialogs.OpenDialogMsg{
 			Model: filepicker.NewFilePickerCmp(a.app.Config().WorkingDir()),
+		})
+	// Open config file in $EDITOR (create parent dirs if missing)
+	case commands.OpenConfigFileMsg:
+		cfgPath := config.GlobalConfigData()
+		if err := os.MkdirAll(filepath.Dir(cfgPath), 0o755); err != nil {
+			return a, util.ReportError(fmt.Errorf("failed to ensure config directory: %w", err))
+		}
+		if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
+			// create minimal file if missing
+			if err := os.WriteFile(cfgPath, []byte("{}\n"), 0o600); err != nil {
+				return a, util.ReportError(fmt.Errorf("failed to create config file: %w", err))
+			}
+		}
+		editor := os.Getenv("EDITOR")
+		if editor == "" {
+			editor = "nvim"
+		}
+		cmd := exec.CommandContext(context.TODO(), editor, cfgPath)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return a, tea.ExecProcess(cmd, func(err error) tea.Msg {
+			if err != nil {
+				return util.ReportError(err)
+			}
+			return util.ReportInfo("Closed config file")
 		})
 	// Permissions
 	case pubsub.Event[permission.PermissionNotification]:

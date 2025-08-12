@@ -144,7 +144,9 @@ type LashSafety struct {
 // LashConfig is the optional Lash-specific configuration namespace.
 type LashConfig struct {
 	// Mode persists the last selected app mode: Shell, Agent, or Auto
-	Mode   string     `json:"mode,omitempty" jsonschema:"description=Last selected app mode (Shell, Agent, or Auto),enum=Shell,enum=Agent,enum=Auto,default=Auto"`
+	Mode string `json:"mode,omitempty" jsonschema:"description=Last selected app mode (Shell, Agent, or Auto),enum=Shell,enum=Agent,enum=Auto,default=Auto"`
+	// YOLO enables skipping all permission prompts (global auto-approve)
+	Yolo   bool       `json:"yolo,omitempty" jsonschema:"description=Skip all permission prompts (YOLO mode),default=false"`
 	Safety LashSafety `json:"safety,omitempty" jsonschema:"description=Lash-specific safety options"`
 }
 
@@ -155,6 +157,10 @@ type Options struct {
 	DebugLSP             bool        `json:"debug_lsp,omitempty" jsonschema:"description=Enable debug logging for LSP servers,default=false"`
 	DisableAutoSummarize bool        `json:"disable_auto_summarize,omitempty" jsonschema:"description=Disable automatic conversation summarization,default=false"`
 	DataDirectory        string      `json:"data_directory,omitempty" jsonschema:"description=Directory for storing application data (relative to working directory),default=.lash,example=.lash"` // Relative to the cwd
+	// Maximum duration for a single agent request before it is canceled. If 0, no global request timeout is applied.
+	RequestTimeoutSeconds int `json:"request_timeout_seconds,omitempty" jsonschema:"description=Max duration in seconds for a single agent request; when set, requests are canceled after this time"`
+	// Maximum duration for each individual tool call unless the tool specifies a shorter timeout. If 0, no extra per-tool cap is applied.
+	ToolCallTimeoutSeconds int `json:"tool_call_timeout_seconds,omitempty" jsonschema:"description=Max duration in seconds for each tool call unless the tool specifies a shorter timeout"`
 }
 
 type MCPs map[string]MCPConfig
@@ -200,21 +206,39 @@ func (l LSPs) Sorted() []LSP {
 }
 
 func (m MCPConfig) ResolvedEnv() []string {
+	// Start from the current process environment so stdio MCPs inherit PATH, HOME, etc.
+	baseEnv := os.Environ()
+
+	// Resolve and overlay user-provided env vars
 	resolver := NewShellVariableResolver(env.New())
-	for e, v := range m.Env {
-		var err error
-		m.Env[e], err = resolver.ResolveValue(v)
+	overrides := make(map[string]string, len(m.Env))
+	for key, value := range m.Env {
+		resolved, err := resolver.ResolveValue(value)
 		if err != nil {
-			slog.Error("error resolving environment variable", "error", err, "variable", e, "value", v)
+			slog.Error("error resolving environment variable", "error", err, "variable", key, "value", value)
 			continue
+		}
+		overrides[key] = resolved
+	}
+
+	// Apply overrides to baseEnv, preserving other variables
+	// exec.Cmd.Env expects KEY=VALUE pairs; replacing in-place avoids duplicates
+	for key, value := range overrides {
+		replaced := false
+		prefix := key + "="
+		for i := range baseEnv {
+			if strings.HasPrefix(baseEnv[i], prefix) {
+				baseEnv[i] = prefix + value
+				replaced = true
+				break
+			}
+		}
+		if !replaced {
+			baseEnv = append(baseEnv, prefix+value)
 		}
 	}
 
-	env := make([]string, 0, len(m.Env))
-	for k, v := range m.Env {
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
-	}
-	return env
+	return baseEnv
 }
 
 func (m MCPConfig) ResolvedHeaders() map[string]string {

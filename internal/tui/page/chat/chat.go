@@ -979,11 +979,11 @@ func (p *chatPage) Help() help.KeyMap {
 			),
 			key.NewBinding(
 				key.WithKeys(core.KeyShiftTab),
-				key.WithHelp(core.KeyShiftTab, core.HelpAutoConfirm),
+				key.WithHelp(core.KeyShiftTab, core.HelpYolo),
 			),
 			key.NewBinding(
 				key.WithKeys(core.KeyCtrlY),
-				key.WithHelp(core.KeyCtrlY, core.HelpYolo),
+				key.WithHelp(core.KeyCtrlY, core.HelpAutoConfirm),
 			),
 		)
 		// Commands is omitted from short help; available under More
@@ -1093,8 +1093,8 @@ func (p *chatPage) Help() help.KeyMap {
 		// Add compact mode toggles only (remove ctrl+c from short help to keep it concise)
 		shortList = append(shortList,
 			key.NewBinding(key.WithKeys(core.KeyCtrlSpace), key.WithHelp(core.KeyCtrlSpace, core.HelpMode)),
-			key.NewBinding(key.WithKeys(core.KeyShiftTab), key.WithHelp(core.KeyShiftTab, core.HelpAutoConfirm)),
-			key.NewBinding(key.WithKeys(core.KeyCtrlY), key.WithHelp(core.KeyCtrlY, core.HelpYolo)),
+			key.NewBinding(key.WithKeys(core.KeyShiftTab), key.WithHelp(core.KeyShiftTab, core.HelpYolo)),
+			key.NewBinding(key.WithKeys(core.KeyCtrlY), key.WithHelp(core.KeyCtrlY, core.HelpAutoConfirm)),
 		)
 	}
 

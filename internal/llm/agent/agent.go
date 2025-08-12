@@ -10,19 +10,19 @@ import (
 	"time"
 
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/csync"
-    "github.com/lacymorrow/lash/internal/history"
-    "github.com/lacymorrow/lash/internal/llm/prompt"
-    "github.com/lacymorrow/lash/internal/llm/provider"
-    "github.com/lacymorrow/lash/internal/llm/tools"
-    "github.com/lacymorrow/lash/internal/log"
-    "github.com/lacymorrow/lash/internal/lsp"
-    "github.com/lacymorrow/lash/internal/message"
-    "github.com/lacymorrow/lash/internal/permission"
-    "github.com/lacymorrow/lash/internal/pubsub"
-    "github.com/lacymorrow/lash/internal/session"
-    "github.com/lacymorrow/lash/internal/shell"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/csync"
+	"github.com/lacymorrow/lash/internal/history"
+	"github.com/lacymorrow/lash/internal/llm/prompt"
+	"github.com/lacymorrow/lash/internal/llm/provider"
+	"github.com/lacymorrow/lash/internal/llm/tools"
+	"github.com/lacymorrow/lash/internal/log"
+	"github.com/lacymorrow/lash/internal/lsp"
+	"github.com/lacymorrow/lash/internal/message"
+	"github.com/lacymorrow/lash/internal/permission"
+	"github.com/lacymorrow/lash/internal/pubsub"
+	"github.com/lacymorrow/lash/internal/session"
+	"github.com/lacymorrow/lash/internal/shell"
 )
 
 // Common errors
@@ -330,7 +330,15 @@ func (a *agent) Run(ctx context.Context, sessionID string, content string, attac
 		return nil, ErrSessionBusy
 	}
 
-	genCtx, cancel := context.WithCancel(ctx)
+	// Wrap request with a configurable timeout if set
+	cfg := config.Get()
+	genCtx := ctx
+	var cancel context.CancelFunc
+	if cfg != nil && cfg.Options != nil && cfg.Options.RequestTimeoutSeconds > 0 {
+		genCtx, cancel = context.WithTimeout(ctx, time.Duration(cfg.Options.RequestTimeoutSeconds)*time.Second)
+	} else {
+		genCtx, cancel = context.WithCancel(ctx)
+	}
 
 	a.activeRequests.Set(sessionID, cancel)
 	go func() {
@@ -448,6 +456,12 @@ func (a *agent) createUserMessage(ctx context.Context, sessionID, content string
 }
 
 func (a *agent) streamAndHandleEvents(ctx context.Context, sessionID string, msgHistory []message.Message) (message.Message, *message.Message, error) {
+	// Apply a per-tool-call cap to avoid indefinite hangs inside tools
+	if cfg := config.Get(); cfg != nil && cfg.Options != nil && cfg.Options.ToolCallTimeoutSeconds > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(cfg.Options.ToolCallTimeoutSeconds)*time.Second)
+		defer cancel()
+	}
 	ctx = context.WithValue(ctx, tools.SessionIDContextKey, sessionID)
 
 	// Create the assistant message first so the spinner shows immediately

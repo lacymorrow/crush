@@ -9,14 +9,14 @@ import (
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
 	"github.com/charmbracelet/lipgloss/v2"
 
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/llm/prompt"
-    "github.com/lacymorrow/lash/internal/tui/components/chat"
-    "github.com/lacymorrow/lash/internal/tui/components/core"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs"
-    "github.com/lacymorrow/lash/internal/tui/exp/list"
-    "github.com/lacymorrow/lash/internal/tui/styles"
-    "github.com/lacymorrow/lash/internal/tui/util"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/llm/prompt"
+	"github.com/lacymorrow/lash/internal/tui/components/chat"
+	"github.com/lacymorrow/lash/internal/tui/components/core"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs"
+	"github.com/lacymorrow/lash/internal/tui/exp/list"
+	"github.com/lacymorrow/lash/internal/tui/styles"
+	"github.com/lacymorrow/lash/internal/tui/util"
 )
 
 const (
@@ -69,6 +69,7 @@ type (
 	ToggleCompactModeMsg  struct{}
 	ToggleThinkingMsg     struct{}
 	OpenExternalEditorMsg struct{}
+	OpenConfigFileMsg     struct{}
 	ToggleYoloModeMsg     struct{}
 	CompactMsg            struct {
 		SessionID string
@@ -361,6 +362,16 @@ func (c *commandDialogCmp) defaultCommands() []Command {
 			},
 		})
 	}
+
+	// Open Lash config file (useful for configuring MCPs and providers)
+	commands = append(commands, Command{
+		ID:          "open_config",
+		Title:       "Open Config File",
+		Description: "Open Lash config to edit MCPs and settings",
+		Handler: func(cmd Command) tea.Cmd {
+			return util.CmdHandler(OpenConfigFileMsg{})
+		},
+	})
 
 	return append(commands, []Command{
 		{

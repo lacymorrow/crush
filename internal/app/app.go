@@ -10,20 +10,20 @@ import (
 	"sync"
 	"time"
 
-    tea "github.com/charmbracelet/bubbletea/v2"
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/csync"
-    "github.com/lacymorrow/lash/internal/db"
-    "github.com/lacymorrow/lash/internal/format"
-    "github.com/lacymorrow/lash/internal/history"
-    "github.com/lacymorrow/lash/internal/llm/agent"
-    "github.com/lacymorrow/lash/internal/log"
-    "github.com/lacymorrow/lash/internal/pubsub"
+	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/csync"
+	"github.com/lacymorrow/lash/internal/db"
+	"github.com/lacymorrow/lash/internal/format"
+	"github.com/lacymorrow/lash/internal/history"
+	"github.com/lacymorrow/lash/internal/llm/agent"
+	"github.com/lacymorrow/lash/internal/log"
+	"github.com/lacymorrow/lash/internal/pubsub"
 
-    "github.com/lacymorrow/lash/internal/lsp"
-    "github.com/lacymorrow/lash/internal/message"
-    "github.com/lacymorrow/lash/internal/permission"
-    "github.com/lacymorrow/lash/internal/session"
+	"github.com/lacymorrow/lash/internal/lsp"
+	"github.com/lacymorrow/lash/internal/message"
+	"github.com/lacymorrow/lash/internal/permission"
+	"github.com/lacymorrow/lash/internal/session"
 )
 
 type App struct {
@@ -63,6 +63,10 @@ func New(ctx context.Context, conn *sql.DB, cfg *config.Config) (*App, error) {
 	messages := message.NewService(q)
 	files := history.NewService(q, conn)
 	skipPermissionsRequests := cfg.Permissions != nil && cfg.Permissions.SkipRequests
+	// If YOLO is enabled in config, skip all permission requests
+	if cfg.Lash != nil && cfg.Lash.Yolo {
+		skipPermissionsRequests = true
+	}
 	allowedTools := []string{}
 	if cfg.Permissions != nil && cfg.Permissions.AllowedTools != nil {
 		allowedTools = cfg.Permissions.AllowedTools

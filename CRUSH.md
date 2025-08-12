@@ -1,4 +1,4 @@
-# Crush Development Guide
+## Lash Development Guide
 
 ## Build/Test/Lint Commands
 
