@@ -5,14 +5,18 @@ import (
 	"log/slog"
 	"time"
 
-    "github.com/lacymorrow/lash/internal/log"
-    "github.com/lacymorrow/lash/internal/lsp"
-    "github.com/lacymorrow/lash/internal/lsp/watcher"
+	"github.com/lacymorrow/lash/internal/log"
+	"github.com/lacymorrow/lash/internal/lsp"
+	"github.com/lacymorrow/lash/internal/lsp/watcher"
 )
 
 // initLSPClients initializes LSP clients.
 func (app *App) initLSPClients(ctx context.Context) {
 	for name, clientConfig := range app.config.LSP {
+		// Respect disabled LSP configurations
+		if clientConfig.Disabled {
+			continue
+		}
 		go app.createAndStartLSPClient(ctx, name, clientConfig.Command, clientConfig.Args...)
 	}
 	slog.Info("LSP clients initialization started in background")
@@ -28,7 +32,7 @@ func (app *App) createAndStartLSPClient(ctx context.Context, name string, comman
 	// Create LSP client.
 	lspClient, err := lsp.NewClient(ctx, name, command, args...)
 	if err != nil {
-		slog.Error("Failed to create LSP client for", name, err)
+		slog.Error("Failed to create LSP client", "name", name, "error", err)
 		updateLSPState(name, lsp.StateError, err, nil, 0)
 		return
 	}

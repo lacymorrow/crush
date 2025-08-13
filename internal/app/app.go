@@ -163,6 +163,9 @@ func (app *App) RunNonInteractive(ctx context.Context, prompt string, quiet bool
 	// Automatically approve all permission requests for this non-interactive session
 	app.Permissions.AutoApproveSession(sess.ID)
 
+	if app.CoderAgent == nil {
+		return fmt.Errorf("coder agent is not initialized")
+	}
 	done, err := app.CoderAgent.Run(ctx, sess.ID, prompt)
 	if err != nil {
 		return fmt.Errorf("failed to start agent processing stream: %w", err)
@@ -211,6 +214,9 @@ func (app *App) RunNonInteractive(ctx context.Context, prompt string, quiet bool
 }
 
 func (app *App) UpdateAgentModel() error {
+	if app.CoderAgent == nil {
+		return fmt.Errorf("coder agent is not initialized")
+	}
 	return app.CoderAgent.UpdateModel()
 }
 

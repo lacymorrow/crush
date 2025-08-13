@@ -177,6 +177,9 @@ func restartMCPClient(ctx context.Context, name string) (*client.Client, error) 
 
 func runTool(ctx context.Context, name, toolName string, input string) (tools.ToolResponse, error) {
 	var args map[string]any
+	if strings.TrimSpace(input) == "" {
+		input = "{}"
+	}
 	if err := json.Unmarshal([]byte(input), &args); err != nil {
 		return tools.NewTextErrorResponse(fmt.Sprintf("error parsing parameters: %s", err)), nil
 	}
@@ -372,6 +375,9 @@ func doGetMCPTools(ctx context.Context, permissions permission.Service, cfg *con
 
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
+			// Save config for potential restarts on transient transport errors
+			mcpClientConfigs.Set(name, m)
+
 			c, err := createMcpClient(m)
 			if err != nil {
 				updateMCPState(name, MCPStateError, err, nil, 0)
