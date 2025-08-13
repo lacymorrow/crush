@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-    "github.com/lacymorrow/lash/internal/permission"
-    "github.com/lacymorrow/lash/internal/shell"
+	"github.com/lacymorrow/lash/internal/permission"
+	"github.com/lacymorrow/lash/internal/shell"
 )
 
 type BashParams struct {
@@ -304,9 +304,11 @@ func blockFuncs() []shell.BlockFunc {
 }
 
 func NewBashTool(permission permission.Service, workingDir string) BaseTool {
-	// Set up command blocking on the persistent shell
+	// Do not hard-block commands. Route all execution through the
+	// permissions service so the UI can approve/deny when needed.
+	// In YOLO mode, the permission service will auto-approve.
 	persistentShell := shell.GetPersistentShell(workingDir)
-	persistentShell.SetBlockFuncs(blockFuncs())
+	persistentShell.SetBlockFuncs([]shell.BlockFunc{})
 
 	return &bashTool{
 		permissions: permission,
