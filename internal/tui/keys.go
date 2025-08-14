@@ -7,6 +7,7 @@ import (
 
 type KeyMap struct {
 	Quit     key.Binding
+	QuitEOF  key.Binding
 	Help     key.Binding
 	Commands key.Binding
 	Suspend  key.Binding
@@ -29,6 +30,10 @@ func DefaultKeyMap() KeyMap {
 		Quit: key.NewBinding(
 			key.WithKeys(core.KeyCtrlC),
 			key.WithHelp(core.KeyCtrlC, core.HelpQuit),
+		),
+		QuitEOF: key.NewBinding(
+			key.WithKeys(core.KeyCtrlD),
+			key.WithHelp(core.KeyCtrlD, core.HelpQuit),
 		),
 		Help: key.NewBinding(
 			key.WithKeys(core.KeyCtrlG),

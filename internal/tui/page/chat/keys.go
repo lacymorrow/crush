@@ -32,8 +32,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp(core.KeyTab, "change focus"),
 		),
 		Details: key.NewBinding(
-			key.WithKeys("ctrl+d"),
-			key.WithHelp("ctrl+d", "toggle details"),
+			key.WithKeys("ctrl+e"),
+			key.WithHelp("ctrl+e", "toggle details"),
 		),
 	}
 }

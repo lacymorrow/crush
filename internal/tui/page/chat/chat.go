@@ -169,7 +169,9 @@ func (p *chatPage) Init() tea.Cmd {
 	p.sidebar.SetCompactMode(p.compact)
 
 	// Set splash state based on config
-	if !config.HasInitialDataConfig() {
+	force := os.Getenv("LASH_FORCE_SPLASH")
+	forceSplash := force == "1" || strings.EqualFold(force, "true") || strings.EqualFold(force, "yes")
+	if forceSplash || !config.HasInitialDataConfig() {
 		// First-time setup: show model selection
 		p.splash.SetOnboarding(true)
 		p.isOnboarding = true

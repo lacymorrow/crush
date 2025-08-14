@@ -451,7 +451,7 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 		a.showingFullHelp = !a.showingFullHelp
 		return a.handleWindowResize(a.wWidth, a.wHeight)
 	// dialogs
-	case key.Matches(msg, a.keyMap.Quit):
+	case key.Matches(msg, a.keyMap.Quit), key.Matches(msg, a.keyMap.QuitEOF):
 		if a.dialog.ActiveDialogID() == quit.QuitDialogID {
 			return tea.Quit
 		}

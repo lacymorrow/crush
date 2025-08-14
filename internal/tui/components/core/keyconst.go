@@ -3,6 +3,7 @@ package core
 // Centralized key strings for global shortcuts
 const (
 	KeyCtrlC      = "ctrl+c"
+	KeyCtrlD      = "ctrl+d"
 	KeyCtrlG      = "ctrl+g"
 	KeyCtrlP      = "ctrl+p"
 	KeyCtrlS      = "ctrl+s"

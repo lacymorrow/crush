@@ -1,0 +1,40 @@
+{
+  "$schema": "https://charm.land/crush.json",
+  "lsp": {
+    "Go": {
+      "command": "gopls"
+    }
+  },
+
+  "mcp": {
+    // "alpaca": {
+    //   "type": "stdio",
+    //   "command": "/root/app/alpaca-mcp-server/run_server.sh"
+    // },
+    "alpaca": {
+      "command": "/Users/lacymorrow/repo/alpaca-mcp-server/myvenv/bin/python",
+      "args": ["/Users/lacymorrow/repo/alpaca-mcp-server/alpaca_mcp_server.py"],
+      "env": {
+        "ALPACA_API_KEY": "AKY9SX8LHXMCM5GCP7P3",
+        "ALPACA_SECRET_KEY": "iZDVh82xzDqV13jrMnTWjTW2SagFZb0iwIU3NVfQ",
+        "ALPACA_PAPER_TRADE": "False"
+      }
+    },
+    "ref": {
+      "command": "npx",
+      "args": ["ref-tools-mcp@latest"],
+      "env": {
+        "REF_API_KEY": "ref-5627020c3c7ad3d7e6a7"
+      }
+    },
+    "exa": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.exa.ai/mcp?exaApiKey=5ec08d79-c9db-4808-bfbb-e888355f9f94"
+      ]
+    }
+  }
+}

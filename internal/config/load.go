@@ -96,12 +96,12 @@ func Load(workingDir string, debug bool) (*Config, error) {
 func PushPopCrushEnv() func() {
 	found := []string{}
 	for _, ev := range os.Environ() {
-		if strings.HasPrefix(ev, "CRUSH_") {
+		if strings.HasPrefix(ev, "LASH_") {
 			pair := strings.SplitN(ev, "=", 2)
 			if len(pair) != 2 {
 				continue
 			}
-			found = append(found, strings.TrimPrefix(pair[0], "CRUSH_"))
+			found = append(found, strings.TrimPrefix(pair[0], "LASH_"))
 		}
 	}
 	backups := make(map[string]string)
@@ -110,7 +110,7 @@ func PushPopCrushEnv() func() {
 	}
 
 	for _, ev := range found {
-		os.Setenv(ev, os.Getenv("CRUSH_"+ev))
+		os.Setenv(ev, os.Getenv("LASH_"+ev))
 	}
 
 	restore := func() {

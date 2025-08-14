@@ -5,16 +5,16 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/fsext"
-    "github.com/lacymorrow/lash/internal/lsp"
-    "github.com/lacymorrow/lash/internal/lsp/protocol"
-    "github.com/lacymorrow/lash/internal/pubsub"
-    "github.com/lacymorrow/lash/internal/session"
-    "github.com/lacymorrow/lash/internal/shell"
-    "github.com/lacymorrow/lash/internal/tui/styles"
-    "github.com/lacymorrow/lash/internal/tui/util"
 	"github.com/charmbracelet/lipgloss/v2"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/fsext"
+	"github.com/lacymorrow/lash/internal/lsp"
+	"github.com/lacymorrow/lash/internal/lsp/protocol"
+	"github.com/lacymorrow/lash/internal/pubsub"
+	"github.com/lacymorrow/lash/internal/session"
+	"github.com/lacymorrow/lash/internal/shell"
+	"github.com/lacymorrow/lash/internal/tui/styles"
+	"github.com/lacymorrow/lash/internal/tui/util"
 )
 
 type Header interface {
@@ -121,9 +121,9 @@ func (h *header) details() string {
 	parts = append(parts, formattedPercentage)
 
 	if h.detailsOpen {
-		parts = append(parts, t.S().Muted.Render("ctrl+d")+t.S().Subtle.Render(" close"))
+		parts = append(parts, t.S().Muted.Render("ctrl+e")+t.S().Subtle.Render(" close"))
 	} else {
-		parts = append(parts, t.S().Muted.Render("ctrl+d")+t.S().Subtle.Render(" open "))
+		parts = append(parts, t.S().Muted.Render("ctrl+e")+t.S().Subtle.Render(" open "))
 	}
 	dot := t.S().Subtle.Render(" • ")
 	return strings.Join(parts, dot)
