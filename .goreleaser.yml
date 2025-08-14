@@ -67,8 +67,8 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
-aur_sources:
-  - private_key: "{{ .Env.AUR_KEY }}"
+# aur_sources:
+#   - private_key: "{{ .Env.AUR_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/lash.git"
     makedepends:
       - go
