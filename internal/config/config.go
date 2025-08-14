@@ -18,10 +18,66 @@ import (
 )
 
 const (
-	// appName determines the base name of the configuration file looked up by the loader
+	// AppName determines the base name of the configuration file looked up by the loader
 	// e.g. it will search for "crush.json" and ".crush.json" in the working directory
-	appName                  = "lash"
+	AppName                  = "lash"
 	DefaultDataDirectoryName = ".lash"
+	// LegacyAppName is the previous application name kept for backward-compatibility
+	LegacyAppName = "crush"
+
+	// ProvidersCacheFilename is the filename used to cache known providers
+	ProvidersCacheFilename = "providers.json"
+
+	// ProvidersCacheTTL defines how long the providers cache is considered fresh
+	ProvidersCacheTTL = 24 * time.Hour
+
+	// Current and legacy config filenames for data/config stores
+	CurrentConfigFilename = "lash.json"
+	LegacyConfigFilename  = "crush.json"
+
+	// Environment variable prefix used for scoped overrides
+	AppEnvPrefix = "LASH_"
+
+	// Standard HTTP headers and values used across providers
+	HeaderAuthorization    = "Authorization"
+	HeaderXAPIKey          = "x-api-key"
+	HeaderAnthropicVersion = "anthropic-version"
+	HeaderRetryAfter       = "Retry-After"
+	BearerPrefix           = "Bearer "
+
+	// Default provider base URLs and versions
+	DefaultOpenAIBaseURL    = "https://api.openai.com/v1"
+	DefaultAnthropicBaseURL = "https://api.anthropic.com/v1"
+	DefaultGeminiBaseURL    = "https://generativelanguage.googleapis.com"
+	DefaultAnthropicAPIVer  = "2023-06-01"
+
+	// Default timeout for simple provider connectivity checks
+	DefaultHTTPTestTimeout = 5 * time.Second
+
+	// UI verification spinner minimum duration to ensure visible feedback
+	VerificationMinSpinnerDuration = 750 * time.Millisecond
+
+	// Onboarding delay before auto-submitting a verified API key
+	OnboardingAPIKeySubmitDelay = 5 * time.Second
+
+	// Safety buffers for context-limit handling
+	ContextLimitBufferTokens = 1000
+	MinSafeMaxTokens         = 1000
+
+	// Logs and UI defaults
+	DefaultTailLines = 1000
+
+	// Tool defaults
+	DefaultBashTimeoutMs = 1 * 60 * 1000  // 1 minute in ms
+	MaxBashTimeoutMs     = 10 * 60 * 1000 // 10 minutes in ms
+	MaxBashOutputChars   = 30000
+
+	// System buffers
+	DefaultDBPageSize  = 4096
+	DefaultPTYReadSize = 4096
+
+	// Storage filenames
+	DefaultDBFilename = "lash.db"
 )
 
 var defaultContextPaths = []string{
@@ -542,26 +598,26 @@ func (c *ProviderConfig) TestConnection(resolver VariableResolver) error {
 	case catwalk.TypeOpenAI:
 		baseURL, _ := resolver.ResolveValue(c.BaseURL)
 		if baseURL == "" {
-			baseURL = "https://api.openai.com/v1"
+			baseURL = DefaultOpenAIBaseURL
 		}
 		testURL = baseURL + "/models"
-		headers["Authorization"] = "Bearer " + apiKey
+		headers[HeaderAuthorization] = BearerPrefix + apiKey
 	case catwalk.TypeAnthropic:
 		baseURL, _ := resolver.ResolveValue(c.BaseURL)
 		if baseURL == "" {
-			baseURL = "https://api.anthropic.com/v1"
+			baseURL = DefaultAnthropicBaseURL
 		}
 		testURL = baseURL + "/models"
-		headers["x-api-key"] = apiKey
-		headers["anthropic-version"] = "2023-06-01"
+		headers[HeaderXAPIKey] = apiKey
+		headers[HeaderAnthropicVersion] = DefaultAnthropicAPIVer
 	case catwalk.TypeGemini:
 		baseURL, _ := resolver.ResolveValue(c.BaseURL)
 		if baseURL == "" {
-			baseURL = "https://generativelanguage.googleapis.com"
+			baseURL = DefaultGeminiBaseURL
 		}
 		testURL = baseURL + "/v1beta/models?key=" + url.QueryEscape(apiKey)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultHTTPTestTimeout)
 	defer cancel()
 	client := &http.Client{}
 	req, err := http.NewRequestWithContext(ctx, "GET", testURL, nil)

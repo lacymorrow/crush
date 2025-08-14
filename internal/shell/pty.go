@@ -15,6 +15,12 @@ import (
 	ptypkg "github.com/creack/pty"
 )
 
+const (
+	ptyReadBufferSize          = 4096
+	gracefulShutdownWaitMillis = 300 * time.Millisecond
+	outputChannelBufferSize    = 64
+)
+
 // PTYShell manages a long-lived interactive shell attached to a PTY.
 // It is intended for real user shells to preserve history, completions,
 // interactive full-screen apps (vim, less, fzf), and custom shell plugins.
@@ -83,7 +89,7 @@ func NewPTYShell(shellBin string, shellArgs []string, env []string, cwd string) 
 	s := &PTYShell{
 		cmd:      cmd,
 		ptmx:     ptmx,
-		outputCh: make(chan []byte, 64),
+		outputCh: make(chan []byte, outputChannelBufferSize),
 		doneCh:   make(chan error, 1),
 		started:  true,
 	}
@@ -97,7 +103,7 @@ func NewPTYShell(shellBin string, shellArgs []string, env []string, cwd string) 
 }
 
 func (s *PTYShell) pumpOutput() {
-	buf := make([]byte, 4096)
+	buf := make([]byte, ptyReadBufferSize)
 	for {
 		n, err := s.ptmx.Read(buf)
 		if n > 0 {
@@ -197,7 +203,7 @@ func (s *PTYShell) Close() error {
 
 	// Give it a moment to exit gracefully
 	select {
-	case <-time.After(300 * time.Millisecond):
+	case <-time.After(gracefulShutdownWaitMillis):
 	case <-s.doneCh:
 	}
 

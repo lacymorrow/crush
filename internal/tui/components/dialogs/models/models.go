@@ -9,13 +9,13 @@ import (
 	"github.com/charmbracelet/bubbles/v2/spinner"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/tui/components/core"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs"
-    "github.com/lacymorrow/lash/internal/tui/exp/list"
-    "github.com/lacymorrow/lash/internal/tui/styles"
-    "github.com/lacymorrow/lash/internal/tui/util"
 	"github.com/charmbracelet/lipgloss/v2"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/tui/components/core"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs"
+	"github.com/lacymorrow/lash/internal/tui/exp/list"
+	"github.com/lacymorrow/lash/internal/tui/styles"
+	"github.com/lacymorrow/lash/internal/tui/util"
 )
 
 const (
@@ -137,10 +137,10 @@ func (m *modelDialogCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					func() tea.Msg {
 						start := time.Now()
 						err := providerConfig.TestConnection(config.Get().Resolver())
-						// intentionally wait for at least 750ms to make sure the user sees the spinner
+						// intentionally wait for at least VerificationMinSpinnerDuration to make sure the user sees the spinner
 						elapsed := time.Since(start)
-						if elapsed < 750*time.Millisecond {
-							time.Sleep(750*time.Millisecond - elapsed)
+						if elapsed < config.VerificationMinSpinnerDuration {
+							time.Sleep(config.VerificationMinSpinnerDuration - elapsed)
 						}
 						if err == nil {
 							m.isAPIKeyValid = true

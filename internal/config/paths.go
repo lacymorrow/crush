@@ -13,6 +13,7 @@ const (
 	EnvLocalAppData  = "LOCALAPPDATA"
 	EnvUserProfile   = "USERPROFILE"
 	EnvHome          = "HOME"
+	EnvCatwalkURL    = "CATWALK_URL"
 )
 
 // XDGConfigDir returns the base XDG config directory path.

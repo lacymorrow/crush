@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const defaultTailLines = 1000
+const defaultTailLines = config.DefaultTailLines
 
 var logsCmd = &cobra.Command{
 	Use:   "logs",
@@ -45,7 +45,7 @@ var logsCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to load configuration: %v", err)
 		}
-		logsFile := filepath.Join(cfg.WorkingDir(), cfg.Options.DataDirectory, "logs", "lash.log")
+		logsFile := filepath.Join(cfg.WorkingDir(), cfg.Options.DataDirectory, "logs", fmt.Sprintf("%s.log", "lash"))
 		_, err = os.Stat(logsFile)
 		if os.IsNotExist(err) {
 			log.Warn("Looks like you are not in a lash project. No logs found.")

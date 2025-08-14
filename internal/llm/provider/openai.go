@@ -511,7 +511,7 @@ func (o *openaiClient) shouldRetry(attempts int, err error) (bool, int64, error)
 			return false, 0, err
 		}
 
-		retryAfterValues = apiErr.Response.Header.Values("Retry-After")
+		retryAfterValues = apiErr.Response.Header.Values(config.HeaderRetryAfter)
 	}
 
 	if apiErr != nil {

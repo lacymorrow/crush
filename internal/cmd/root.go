@@ -7,14 +7,14 @@ import (
 	"log/slog"
 	"os"
 
-    tea "github.com/charmbracelet/bubbletea/v2"
-    "github.com/lacymorrow/lash/internal/app"
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/db"
-    "github.com/lacymorrow/lash/internal/tui"
-    "github.com/lacymorrow/lash/internal/version"
+	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/fang"
 	"github.com/charmbracelet/x/term"
+	"github.com/lacymorrow/lash/internal/app"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/db"
+	"github.com/lacymorrow/lash/internal/tui"
+	"github.com/lacymorrow/lash/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ func init() {
 }
 
 var rootCmd = &cobra.Command{
-    Use:   "lash",
+	Use:   "lash",
 	Short: "Lacy Shell — Terminal-based AI assistant for software development",
 	Long: `Lacy Shell is a powerful terminal-based AI assistant that helps with software development tasks.
 It provides an interactive chat interface with AI capabilities, code analysis, and LSP integration

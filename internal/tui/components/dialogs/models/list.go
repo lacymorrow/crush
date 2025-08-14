@@ -7,10 +7,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/tui/exp/list"
-    "github.com/lacymorrow/lash/internal/tui/styles"
-    "github.com/lacymorrow/lash/internal/tui/util"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/tui/exp/list"
+	"github.com/lacymorrow/lash/internal/tui/styles"
+	"github.com/lacymorrow/lash/internal/tui/util"
 )
 
 type listModel = list.FilterableGroupList[list.CompletionItem[ModelOption]]

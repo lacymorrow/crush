@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lacymorrow/lash/internal/config"
 	"github.com/lacymorrow/lash/internal/permission"
 	"github.com/lacymorrow/lash/internal/shell"
 )
@@ -35,9 +36,9 @@ type bashTool struct {
 const (
 	BashToolName = "bash"
 
-	DefaultTimeout  = 1 * 60 * 1000  // 1 minutes in milliseconds
-	MaxTimeout      = 10 * 60 * 1000 // 10 minutes in milliseconds
-	MaxOutputLength = 30000
+	DefaultTimeout  = config.DefaultBashTimeoutMs // 1 minute in milliseconds
+	MaxTimeout      = config.MaxBashTimeoutMs     // 10 minutes in milliseconds
+	MaxOutputLength = config.MaxBashOutputChars
 	BashNoOutput    = "no output"
 )
 

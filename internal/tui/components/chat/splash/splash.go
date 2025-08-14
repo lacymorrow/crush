@@ -86,7 +86,8 @@ func New() Splash {
 	listKeyMap.DownOneItem = keyMap.Next
 	listKeyMap.UpOneItem = keyMap.Previous
 
-	modelList := models.NewModelListComponent(listKeyMap, "Find your fave", false)
+	const splashModelListPlaceholder = "Start typing..."
+	modelList := models.NewModelListComponent(listKeyMap, splashModelListPlaceholder, false)
 	apiKeyInput := models.NewAPIKeyInput()
 
 	return &splashCmp{
@@ -143,7 +144,7 @@ func (s *splashCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		u, cmd := s.apiKeyInput.Update(msg)
 		s.apiKeyInput = u.(*models.APIKeyInput)
 		if msg.State == models.APIKeyInputStateVerified {
-			return s, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+			return s, tea.Tick(config.OnboardingAPIKeySubmitDelay, func(t time.Time) tea.Msg {
 				return SubmitAPIKeyMsg{}
 			})
 		}
@@ -212,10 +213,10 @@ func (s *splashCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					func() tea.Msg {
 						start := time.Now()
 						err := providerConfig.TestConnection(config.Get().Resolver())
-						// intentionally wait for at least 750ms to make sure the user sees the spinner
+						// intentionally wait for at least VerificationMinSpinnerDuration to make sure the user sees the spinner
 						elapsed := time.Since(start)
-						if elapsed < 750*time.Millisecond {
-							time.Sleep(750*time.Millisecond - elapsed)
+						if elapsed < config.VerificationMinSpinnerDuration {
+							time.Sleep(config.VerificationMinSpinnerDuration - elapsed)
 						}
 						if err == nil {
 							s.isAPIKeyValid = true

@@ -397,6 +397,11 @@ func (m *editorCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Handle Enter key
 		if m.textarea.Focused() && key.Matches(msg, m.keyMap.SendMessage) {
+			trimmed := strings.TrimSpace(m.textarea.Value())
+			// If no active session and input is empty, open recent sessions dialog
+			if trimmed == "" && m.session.ID == "" {
+				return m, util.CmdHandler(commands.SwitchSessionsMsg{})
+			}
 			value := m.textarea.Value()
 			if len(value) > 0 && value[len(value)-1] == '\\' {
 				// If the last character is a backslash, remove it and add a newline
@@ -507,6 +512,10 @@ func (m *editorCmp) View() string {
 	}
 	if m.app.Permissions.SkipRequests() {
 		m.textarea.Placeholder = "Yolo mode!"
+	}
+	// If no active session and input is empty, hint about sessions
+	if m.session.ID == "" && strings.TrimSpace(m.textarea.Value()) == "" {
+		m.textarea.Placeholder = " Press Enter for recent sessions"
 	}
 	if len(m.attachments) == 0 {
 		content := t.S().Base.Padding(1).Render(

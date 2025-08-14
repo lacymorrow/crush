@@ -41,10 +41,10 @@ func LoadReader(fd io.Reader) (*Config, error) {
 func Load(workingDir string, debug bool) (*Config, error) {
 	// uses default config paths
 	configPaths := []string{
-		findConfig(appName),
+		findConfig(AppName),
 		GlobalConfigData(),
-		filepath.Join(workingDir, fmt.Sprintf("%s.json", appName)),
-		filepath.Join(workingDir, fmt.Sprintf(".%s.json", appName)),
+		filepath.Join(workingDir, fmt.Sprintf("%s.json", AppName)),
+		filepath.Join(workingDir, fmt.Sprintf(".%s.json", AppName)),
 	}
 	cfg, err := loadFromConfigPaths(configPaths)
 	if err != nil {
@@ -61,7 +61,7 @@ func Load(workingDir string, debug bool) (*Config, error) {
 
 	// Setup logs
 	log.Setup(
-		filepath.Join(cfg.Options.DataDirectory, "logs", fmt.Sprintf("%s.log", appName)),
+		filepath.Join(cfg.Options.DataDirectory, "logs", fmt.Sprintf("%s.log", AppName)),
 		cfg.Options.Debug,
 	)
 
@@ -95,12 +95,12 @@ func Load(workingDir string, debug bool) (*Config, error) {
 func PushPopCrushEnv() func() {
 	found := []string{}
 	for _, ev := range os.Environ() {
-		if strings.HasPrefix(ev, "LASH_") {
+		if strings.HasPrefix(ev, AppEnvPrefix) {
 			pair := strings.SplitN(ev, "=", 2)
 			if len(pair) != 2 {
 				continue
 			}
-			found = append(found, strings.TrimPrefix(pair[0], "LASH_"))
+			found = append(found, strings.TrimPrefix(pair[0], AppEnvPrefix))
 		}
 	}
 	backups := make(map[string]string)
@@ -109,7 +109,7 @@ func PushPopCrushEnv() func() {
 	}
 
 	for _, ev := range found {
-		os.Setenv(ev, os.Getenv("LASH_"+ev))
+		os.Setenv(ev, os.Getenv(AppEnvPrefix+ev))
 	}
 
 	restore := func() {
@@ -591,17 +591,17 @@ func hasAWSCredentials(env env.Env) bool {
 func GlobalConfigData() string {
 	base := XDGDataDir()
 
-	// Prioritize the new "lash" directory
-	lashDir := filepath.Join(base, "lash")
-	lashData := filepath.Join(lashDir, "lash.json")
+	// Prioritize the current application directory
+	lashDir := filepath.Join(base, AppName)
+	lashData := filepath.Join(lashDir, CurrentConfigFilename)
 
 	if _, err := os.Stat(lashData); err == nil {
 		return lashData
 	}
 
-	// Fallback to the old "crush" directory
-	crushDir := filepath.Join(base, "crush")
-	crushData := filepath.Join(crushDir, "crush.json")
+	// Fallback to the legacy application directory
+	crushDir := filepath.Join(base, LegacyAppName)
+	crushData := filepath.Join(crushDir, LegacyConfigFilename)
 	if _, err := os.Stat(crushData); err == nil {
 		return crushData
 	}

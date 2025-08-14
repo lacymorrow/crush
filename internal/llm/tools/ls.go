@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-    "github.com/lacymorrow/lash/internal/fsext"
-    "github.com/lacymorrow/lash/internal/permission"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/fsext"
+	"github.com/lacymorrow/lash/internal/permission"
 )
 
 type LSParams struct {
@@ -41,7 +42,7 @@ type lsTool struct {
 
 const (
 	LSToolName    = "ls"
-	MaxLSFiles    = 1000
+	MaxLSFiles    = config.DefaultTailLines
 	lsDescription = `Directory listing tool that shows files and subdirectories in a tree structure, helping you explore and understand the project organization.
 
 WHEN TO USE THIS TOOL:

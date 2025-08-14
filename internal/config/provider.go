@@ -25,16 +25,16 @@ var (
 // file to cache provider data
 func providerCacheFileData() string {
 	base := XDGDataDir()
-	// Prioritize the new "lash" directory
-	lashDir := filepath.Join(base, "lash")
-	lashProviders := filepath.Join(lashDir, "providers.json")
+	// Prefer the current application directory
+	currentDir := filepath.Join(base, AppName)
+	currentProviders := filepath.Join(currentDir, ProvidersCacheFilename)
 
-	if _, err := os.Stat(lashDir); err == nil {
-		return lashProviders
+	if _, err := os.Stat(currentDir); err == nil {
+		return currentProviders
 	}
-	// Fallback to the old "crush" directory
-	crushDir := filepath.Join(base, "crush")
-	return filepath.Join(crushDir, "providers.json")
+	// Fallback to the legacy application directory
+	legacyDir := filepath.Join(base, LegacyAppName)
+	return filepath.Join(legacyDir, ProvidersCacheFilename)
 }
 
 func saveProvidersInCache(path string, providers []catwalk.Provider) error {
@@ -68,7 +68,7 @@ func loadProvidersFromCache(path string) ([]catwalk.Provider, error) {
 }
 
 func Providers() ([]catwalk.Provider, error) {
-	catwalkURL := cmp.Or(os.Getenv("CATWALK_URL"), defaultCatwalkURL)
+	catwalkURL := cmp.Or(os.Getenv(EnvCatwalkURL), defaultCatwalkURL)
 	client := catwalk.NewWithURL(catwalkURL)
 	path := providerCacheFileData()
 	return loadProvidersOnce(client, path)
@@ -122,5 +122,5 @@ func isCacheStale(path string) (stale, exists bool) {
 	if err != nil {
 		return true, false
 	}
-	return time.Since(info.ModTime()) > 24*time.Hour, true
+	return time.Since(info.ModTime()) > ProvidersCacheTTL, true
 }

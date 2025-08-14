@@ -65,12 +65,12 @@ func createAnthropicClient(opts providerClientOptions, tp AnthropicClientType) a
 		}
 	}
 
-	isBearerToken := strings.HasPrefix(opts.apiKey, "Bearer ")
+	isBearerToken := strings.HasPrefix(opts.apiKey, config.BearerPrefix)
 
 	if opts.apiKey != "" && !hasBearerAuth {
 		if isBearerToken {
 			slog.Debug("API key starts with 'Bearer ', using as Authorization header")
-			anthropicClientOptions = append(anthropicClientOptions, option.WithHeader("Authorization", opts.apiKey))
+			anthropicClientOptions = append(anthropicClientOptions, option.WithHeader(config.HeaderAuthorization, opts.apiKey))
 		} else {
 			// Use standard X-Api-Key header
 			anthropicClientOptions = append(anthropicClientOptions, option.WithAPIKey(opts.apiKey))
@@ -535,11 +535,11 @@ func (a *anthropicClient) handleContextLimitError(apiErr *anthropic.Error) (int,
 		return 0, false
 	}
 
-	// Calculate safe max_tokens with a buffer of 1000 tokens
-	safeMaxTokens := contextLimit - inputTokens - 1000
+	// Calculate safe max_tokens with a buffer
+	safeMaxTokens := contextLimit - inputTokens - config.ContextLimitBufferTokens
 
 	// Ensure we don't go below a minimum threshold
-	safeMaxTokens = max(safeMaxTokens, 1000)
+	safeMaxTokens = max(safeMaxTokens, config.MinSafeMaxTokens)
 
 	return safeMaxTokens, true
 }
