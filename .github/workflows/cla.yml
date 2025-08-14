@@ -1,4 +1,4 @@
-name: "CLA Assistant"
+name: "Contributor License Agreement Assistant"
 
 on:
   issue_comment:
