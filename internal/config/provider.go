@@ -25,7 +25,16 @@ var (
 // file to cache provider data
 func providerCacheFileData() string {
 	base := XDGDataDir()
-	return filepath.Join(base, appName, "providers.json")
+	// Prioritize the new "lash" directory
+	lashDir := filepath.Join(base, "lash")
+	lashProviders := filepath.Join(lashDir, "providers.json")
+
+	if _, err := os.Stat(lashDir); err == nil {
+		return lashProviders
+	}
+	// Fallback to the old "crush" directory
+	crushDir := filepath.Join(base, "crush")
+	return filepath.Join(crushDir, "providers.json")
 }
 
 func saveProvidersInCache(path string, providers []catwalk.Provider) error {

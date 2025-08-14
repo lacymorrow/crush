@@ -20,7 +20,7 @@ import (
 const (
 	// appName determines the base name of the configuration file looked up by the loader
 	// e.g. it will search for "crush.json" and ".crush.json" in the working directory
-	appName                  = "crush"
+	appName                  = "lash"
 	DefaultDataDirectoryName = ".lash"
 )
 

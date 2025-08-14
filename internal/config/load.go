@@ -41,7 +41,7 @@ func LoadReader(fd io.Reader) (*Config, error) {
 func Load(workingDir string, debug bool) (*Config, error) {
 	// uses default config paths
 	configPaths := []string{
-		globalConfig(),
+		findConfig(appName),
 		GlobalConfigData(),
 		filepath.Join(workingDir, fmt.Sprintf("%s.json", appName)),
 		filepath.Join(workingDir, fmt.Sprintf(".%s.json", appName)),
@@ -586,16 +586,26 @@ func hasAWSCredentials(env env.Env) bool {
 	return false
 }
 
-func globalConfig() string {
-	base := XDGConfigDir()
-	return filepath.Join(base, appName, fmt.Sprintf("%s.json", appName))
-}
-
 // GlobalConfigData returns the path to the main data directory for the application.
 // this config is used when the app overrides configurations instead of updating the global config.
 func GlobalConfigData() string {
 	base := XDGDataDir()
-	return filepath.Join(base, appName, fmt.Sprintf("%s.json", appName))
+
+	// Prioritize the new "lash" directory
+	lashDir := filepath.Join(base, "lash")
+	lashData := filepath.Join(lashDir, "lash.json")
+
+	if _, err := os.Stat(lashData); err == nil {
+		return lashData
+	}
+
+	// Fallback to the old "crush" directory
+	crushDir := filepath.Join(base, "crush")
+	crushData := filepath.Join(crushDir, "crush.json")
+	if _, err := os.Stat(crushData); err == nil {
+		return crushData
+	}
+	return lashData
 }
 
 var HomeDir = sync.OnceValue(func() string {
