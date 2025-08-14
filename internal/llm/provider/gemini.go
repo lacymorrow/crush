@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/llm/tools"
-    "github.com/lacymorrow/lash/internal/log"
-    "github.com/lacymorrow/lash/internal/message"
 	"github.com/google/uuid"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/llm/tools"
+	"github.com/lacymorrow/lash/internal/log"
+	"github.com/lacymorrow/lash/internal/message"
 	"google.golang.org/genai"
 )
 
@@ -447,11 +447,8 @@ func (g *geminiClient) shouldRetry(attempts int, err error) (bool, int64, error)
 	}
 
 	// Calculate backoff with jitter
-	backoffMs := 2000 * (1 << (attempts - 1))
-	jitterMs := int(float64(backoffMs) * 0.2)
-	retryMs := backoffMs + jitterMs
-
-	return true, int64(retryMs), nil
+	backoffMs := computeBackoffMs(attempts)
+	return true, int64(backoffMs), nil
 }
 
 func (g *geminiClient) usage(resp *genai.GenerateContentResponse) TokenUsage {

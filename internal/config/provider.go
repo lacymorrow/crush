@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"time"
 
@@ -25,23 +24,8 @@ var (
 
 // file to cache provider data
 func providerCacheFileData() string {
-	xdgDataHome := os.Getenv("XDG_DATA_HOME")
-	if xdgDataHome != "" {
-		return filepath.Join(xdgDataHome, appName, "providers.json")
-	}
-
-    // return the path to the main data directory
-    // for windows, it should be in `%LOCALAPPDATA%/lash/`
-    // for linux and macOS, it should be in `$HOME/.local/share/lash/`
-	if runtime.GOOS == "windows" {
-		localAppData := os.Getenv("LOCALAPPDATA")
-		if localAppData == "" {
-			localAppData = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local")
-		}
-		return filepath.Join(localAppData, appName, "providers.json")
-	}
-
-	return filepath.Join(os.Getenv("HOME"), ".local", "share", appName, "providers.json")
+	base := XDGDataDir()
+	return filepath.Join(base, appName, "providers.json")
 }
 
 func saveProvidersInCache(path string, providers []catwalk.Provider) error {

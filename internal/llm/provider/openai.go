@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/llm/tools"
-    "github.com/lacymorrow/lash/internal/log"
-    "github.com/lacymorrow/lash/internal/message"
 	"github.com/google/uuid"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/llm/tools"
+	"github.com/lacymorrow/lash/internal/log"
+	"github.com/lacymorrow/lash/internal/message"
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 	"github.com/openai/openai-go/packages/param"
@@ -523,9 +523,8 @@ func (o *openaiClient) shouldRetry(attempts int, err error) (bool, int64, error)
 		slog.Error("OpenAI API error", "error", err.Error(), "attempt", attempts, "max_retries", maxRetries)
 	}
 
-	backoffMs := 2000 * (1 << (attempts - 1))
-	jitterMs := int(float64(backoffMs) * 0.2)
-	retryMs = backoffMs + jitterMs
+	backoffMs := computeBackoffMs(attempts)
+	retryMs = backoffMs
 	if len(retryAfterValues) > 0 {
 		if _, err := fmt.Sscanf(retryAfterValues[0], "%d", &retryMs); err == nil {
 			retryMs = retryMs * 1000

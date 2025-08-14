@@ -17,10 +17,10 @@ import (
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/vertex"
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/llm/tools"
-    "github.com/lacymorrow/lash/internal/log"
-    "github.com/lacymorrow/lash/internal/message"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/llm/tools"
+	"github.com/lacymorrow/lash/internal/log"
+	"github.com/lacymorrow/lash/internal/message"
 )
 
 // Pre-compiled regex for parsing context limit errors.
@@ -507,9 +507,8 @@ func (a *anthropicClient) shouldRetry(attempts int, err error) (bool, int64, err
 	retryMs := 0
 	retryAfterValues := apiErr.Response.Header.Values("Retry-After")
 
-	backoffMs := 2000 * (1 << (attempts - 1))
-	jitterMs := int(float64(backoffMs) * 0.2)
-	retryMs = backoffMs + jitterMs
+	backoffMs := computeBackoffMs(attempts)
+	retryMs = backoffMs
 	if len(retryAfterValues) > 0 {
 		if _, err := fmt.Sscanf(retryAfterValues[0], "%d", &retryMs); err == nil {
 			retryMs = retryMs * 1000

@@ -20,8 +20,8 @@ import (
 const (
 	// appName determines the base name of the configuration file looked up by the loader
 	// e.g. it will search for "crush.json" and ".crush.json" in the working directory
-	appName              = "crush"
-	defaultDataDirectory = ".lash"
+	appName                  = "crush"
+	DefaultDataDirectoryName = ".lash"
 )
 
 var defaultContextPaths = []string{
@@ -30,6 +30,10 @@ var defaultContextPaths = []string{
 	".cursor/rules/",
 	"CLAUDE.md",
 	"CLAUDE.local.md",
+	"Claude.md",
+	"Claude.local.md",
+	"claude.md",
+	"claude.local.md",
 	"GEMINI.md",
 	"gemini.md",
 	"lash.md",
@@ -38,6 +42,14 @@ var defaultContextPaths = []string{
 	"Crush.local.md",
 	"CRUSH.md",
 	"CRUSH.local.md",
+	"crush.md",
+	"crush.local.md",
+	"AGENT.md",
+	"AGENT.local.md",
+	"Agent.md",
+	"Agent.local.md",
+	"agent.md",
+	"agent.local.md",
 	"AGENTS.md",
 	"agents.md",
 	"Agents.md",
