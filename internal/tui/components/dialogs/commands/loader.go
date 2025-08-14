@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/tui/util"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/tui/util"
 )
 
 const (
@@ -56,7 +56,7 @@ func buildCommandSources(cfg *config.Config) []commandSource {
 	// Home directory
 	if home, err := os.UserHomeDir(); err == nil {
 		sources = append(sources, commandSource{
-            path:   filepath.Join(home, ".lash", "commands"),
+			path:   filepath.Join(home, config.DefaultDataDirectoryName, "commands"),
 			prefix: UserCommandPrefix,
 		})
 	}
@@ -71,16 +71,7 @@ func buildCommandSources(cfg *config.Config) []commandSource {
 }
 
 func getXDGCommandsDir() string {
-	xdgHome := os.Getenv("XDG_CONFIG_HOME")
-	if xdgHome == "" {
-		if home, err := os.UserHomeDir(); err == nil {
-			xdgHome = filepath.Join(home, ".config")
-		}
-	}
-	if xdgHome != "" {
-        return filepath.Join(xdgHome, "lash", "commands")
-	}
-	return ""
+	return filepath.Join(config.XDGConfigDir(), "lash", "commands")
 }
 
 func (l *commandLoader) loadAll() ([]Command, error) {

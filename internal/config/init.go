@@ -67,13 +67,30 @@ func crushMdExists(dir string) (bool, error) {
 		return false, err
 	}
 
+	// Recognize a broader set of AI rules files, case-insensitive
+	recognized := map[string]struct{}{}
+	for _, p := range defaultContextPaths {
+		recognized[strings.ToLower(p)] = struct{}{}
+	}
+	recognized[".cursorrules"] = struct{}{}
+
 	for _, entry := range entries {
+		lowerName := strings.ToLower(entry.Name())
 		if entry.IsDir() {
+			// Check for .cursor/rules (case-insensitive)
+			if lowerName == ".cursor" {
+				cursorEntries, err := os.ReadDir(filepath.Join(dir, entry.Name()))
+				if err == nil {
+					for _, ce := range cursorEntries {
+						if ce.IsDir() && strings.ToLower(ce.Name()) == "rules" {
+							return true, nil
+						}
+					}
+				}
+			}
 			continue
 		}
-
-		name := strings.ToLower(entry.Name())
-		if name == "crush.md" {
+		if _, ok := recognized[lowerName]; ok {
 			return true, nil
 		}
 	}

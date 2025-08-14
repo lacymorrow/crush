@@ -1,4 +1,5 @@
 # Binaries for programs and plugins
+./lash
 *.exe
 *.exe~
 *.dll
@@ -49,3 +50,5 @@ Thumbs.db
 manpages/
 completions/
 !internal/tui/components/completions/
+
+/.lash/

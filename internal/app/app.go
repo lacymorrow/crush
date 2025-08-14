@@ -26,6 +26,8 @@ import (
 	"github.com/lacymorrow/lash/internal/session"
 )
 
+const subscriberSendTimeout = 2 * time.Second
+
 type App struct {
 	Sessions    session.Service
 	Messages    message.Service
@@ -258,7 +260,7 @@ func setupSubscriber[T any](
 				var msg tea.Msg = event
 				select {
 				case outputCh <- msg:
-				case <-time.After(2 * time.Second):
+				case <-time.After(subscriberSendTimeout):
 					slog.Warn("message dropped due to slow consumer", "name", name)
 				case <-ctx.Done():
 					slog.Debug("subscription cancelled", "name", name)

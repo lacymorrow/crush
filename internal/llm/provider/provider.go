@@ -6,14 +6,25 @@ import (
 
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
 
-    "github.com/lacymorrow/lash/internal/config"
-    "github.com/lacymorrow/lash/internal/llm/tools"
-    "github.com/lacymorrow/lash/internal/message"
+	"github.com/lacymorrow/lash/internal/config"
+	"github.com/lacymorrow/lash/internal/llm/tools"
+	"github.com/lacymorrow/lash/internal/message"
 )
 
 type EventType string
 
 const maxRetries = 8
+
+// computeBackoffMs returns an exponential backoff in milliseconds with jitter.
+// Base of 2000ms doubling each attempt, with 20% jitter.
+func computeBackoffMs(attempts int) int {
+	if attempts <= 0 {
+		attempts = 1
+	}
+	backoffMs := 2000 * (1 << (attempts - 1))
+	jitterMs := int(float64(backoffMs) * 0.2)
+	return backoffMs + jitterMs
+}
 
 const (
 	EventContentStart   EventType = "content_start"

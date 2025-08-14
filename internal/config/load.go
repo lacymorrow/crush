@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -313,7 +312,7 @@ func (c *Config) setDefaults(workingDir string) {
 		c.Options.ContextPaths = []string{}
 	}
 	if c.Options.DataDirectory == "" {
-		c.Options.DataDirectory = filepath.Join(workingDir, defaultDataDirectory)
+		c.Options.DataDirectory = filepath.Join(workingDir, DefaultDataDirectoryName)
 	}
 	if c.Providers == nil {
 		c.Providers = csync.NewMap[string, ProviderConfig]()
@@ -588,45 +587,15 @@ func hasAWSCredentials(env env.Env) bool {
 }
 
 func globalConfig() string {
-	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
-	if xdgConfigHome != "" {
-		return filepath.Join(xdgConfigHome, appName, fmt.Sprintf("%s.json", appName))
-	}
-
-	// return the path to the main config directory
-	// for windows, it should be in `%LOCALAPPDATA%/crush/`
-	// for linux and macOS, it should be in `$HOME/.config/crush/`
-	if runtime.GOOS == "windows" {
-		localAppData := os.Getenv("LOCALAPPDATA")
-		if localAppData == "" {
-			localAppData = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local")
-		}
-		return filepath.Join(localAppData, appName, fmt.Sprintf("%s.json", appName))
-	}
-
-	return filepath.Join(os.Getenv("HOME"), ".config", appName, fmt.Sprintf("%s.json", appName))
+	base := XDGConfigDir()
+	return filepath.Join(base, appName, fmt.Sprintf("%s.json", appName))
 }
 
 // GlobalConfigData returns the path to the main data directory for the application.
 // this config is used when the app overrides configurations instead of updating the global config.
 func GlobalConfigData() string {
-	xdgDataHome := os.Getenv("XDG_DATA_HOME")
-	if xdgDataHome != "" {
-		return filepath.Join(xdgDataHome, appName, fmt.Sprintf("%s.json", appName))
-	}
-
-	// return the path to the main data directory
-	// for windows, it should be in `%LOCALAPPDATA%/crush/`
-	// for linux and macOS, it should be in `$HOME/.local/share/crush/`
-	if runtime.GOOS == "windows" {
-		localAppData := os.Getenv("LOCALAPPDATA")
-		if localAppData == "" {
-			localAppData = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local")
-		}
-		return filepath.Join(localAppData, appName, fmt.Sprintf("%s.json", appName))
-	}
-
-	return filepath.Join(os.Getenv("HOME"), ".local", "share", appName, fmt.Sprintf("%s.json", appName))
+	base := XDGDataDir()
+	return filepath.Join(base, appName, fmt.Sprintf("%s.json", appName))
 }
 
 var HomeDir = sync.OnceValue(func() string {
