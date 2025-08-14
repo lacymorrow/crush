@@ -16,20 +16,20 @@ import (
 	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/bubbles/v2/textarea"
 	tea "github.com/charmbracelet/bubbletea/v2"
-    "github.com/lacymorrow/lash/internal/app"
-    "github.com/lacymorrow/lash/internal/fsext"
-    "github.com/lacymorrow/lash/internal/message"
-    "github.com/lacymorrow/lash/internal/session"
-    "github.com/lacymorrow/lash/internal/tui/components/chat"
-    "github.com/lacymorrow/lash/internal/tui/components/completions"
-    "github.com/lacymorrow/lash/internal/tui/components/core/layout"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs/commands"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs/filepicker"
-    "github.com/lacymorrow/lash/internal/tui/components/dialogs/quit"
-    "github.com/lacymorrow/lash/internal/tui/styles"
-    "github.com/lacymorrow/lash/internal/tui/util"
 	"github.com/charmbracelet/lipgloss/v2"
+	"github.com/lacymorrow/lash/internal/app"
+	"github.com/lacymorrow/lash/internal/fsext"
+	"github.com/lacymorrow/lash/internal/message"
+	"github.com/lacymorrow/lash/internal/session"
+	"github.com/lacymorrow/lash/internal/tui/components/chat"
+	"github.com/lacymorrow/lash/internal/tui/components/completions"
+	"github.com/lacymorrow/lash/internal/tui/components/core/layout"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs/commands"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs/filepicker"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs/quit"
+	"github.com/lacymorrow/lash/internal/tui/styles"
+	"github.com/lacymorrow/lash/internal/tui/util"
 )
 
 type Editor interface {
@@ -165,9 +165,13 @@ func (m *editorCmp) send() tea.Cmd {
 		return util.CmdHandler(dialogs.OpenDialogMsg{Model: quit.NewQuitDialog()})
 	}
 
-	// Append to history. If we don't yet have a session, stash the first entry
-	// and move it to the proper session on SetSession.
+	// Append to global input history for cross-session navigation.
+	// Also keep existing per-session stashing behavior for backward compatibility.
 	if value != "" {
+		// Global history (app-wide, persisted)
+		_ = m.app.AppendInputHistory(value)
+
+		// Existing per-session history behavior
 		if m.session.ID == "" {
 			// Defer attaching to a specific session ID until it's created.
 			m.pendingFirstHistoryEntry = value
@@ -314,15 +318,11 @@ func (m *editorCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, util.CmdHandler(completions.CloseCompletionsMsg{}))
 		}
 
-		// History navigation: Up/Down
+		// History navigation: Up/Down (global, across sessions)
 		if msg.String() == "up" || msg.String() == "down" {
 			// Only handle when focused and not deleting attachments and not showing completions
 			if m.textarea.Focused() && !m.deleteMode && !m.isCompletionsOpen {
-				// initialize history map if needed
-				if m.inputHistory == nil {
-					m.inputHistory = make(map[string][]string)
-				}
-				history := m.inputHistory[m.session.ID]
+				history := m.app.InputHistory
 				if len(history) > 0 {
 					if msg.String() == "up" {
 						// Enter history nav only if at the top line to avoid interfering with multi-line editing

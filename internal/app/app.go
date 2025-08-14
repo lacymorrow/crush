@@ -1,12 +1,17 @@
 package app
 
 import (
+	"bufio"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -56,6 +61,11 @@ type App struct {
 
 	// UI Mode: "Shell", "Agent", or "Auto"
 	Mode string
+
+	// InputHistory stores a global list of user-entered prompts across all
+	// sessions for convenient navigation with Up/Down arrows, similar to a shell.
+	// Most recent entries are appended at the end.
+	InputHistory []string
 }
 
 // New initializes a new applcation instance.
@@ -98,9 +108,16 @@ func New(ctx context.Context, conn *sql.DB, cfg *config.Config) (*App, error) {
 		tuiWG:           &sync.WaitGroup{},
 
 		Mode: cfg.ActiveMode(),
+
+		InputHistory: make([]string, 0, 128),
 	}
 
 	app.setupEvents()
+
+	// Load global input history from disk (best-effort; non-fatal on error)
+	if err := app.LoadInputHistory(); err != nil {
+		slog.Warn("Failed to load input history", "error", err)
+	}
 
 	// Initialize LSP clients in the background.
 	app.initLSPClients(ctx)
@@ -114,6 +131,83 @@ func New(ctx context.Context, conn *sql.DB, cfg *config.Config) (*App, error) {
 		slog.Warn("No agent configuration found")
 	}
 	return app, nil
+}
+
+// historyFilePath returns the path to the persisted input history file.
+func (app *App) historyFilePath() string {
+	// Store alongside the main database in the data directory
+	return filepath.Join(app.config.Options.DataDirectory, "input_history.jsonl")
+}
+
+// LoadInputHistory loads the global input history from disk, if present.
+// Entries are stored as JSON strings, one per line.
+func (app *App) LoadInputHistory() error {
+	path := app.historyFilePath()
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	defer f.Close()
+
+	var loaded []string
+	scanner := bufio.NewScanner(f)
+	// Increase the buffer in case of long multi-line prompts
+	buf := make([]byte, 0, 1024*64)
+	scanner.Buffer(buf, 1024*1024)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		var s string
+		if err := json.Unmarshal(line, &s); err != nil {
+			// Skip malformed lines
+			continue
+		}
+		if s == "" {
+			continue
+		}
+		loaded = append(loaded, s)
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	if len(loaded) > 0 {
+		app.InputHistory = append(app.InputHistory, loaded...)
+	}
+	return nil
+}
+
+// AppendInputHistory appends an entry to the in-memory and on-disk history.
+// It skips consecutive duplicates. Entries are stored as JSONL for safe multiline support.
+func (app *App) AppendInputHistory(entry string) error {
+	entry = strings.TrimSpace(entry)
+	if entry == "" {
+		return nil
+	}
+	if n := len(app.InputHistory); n > 0 && app.InputHistory[n-1] == entry {
+		return nil
+	}
+	app.InputHistory = append(app.InputHistory, entry)
+
+	// Ensure data directory exists
+	if err := os.MkdirAll(app.config.Options.DataDirectory, 0o700); err != nil {
+		return err
+	}
+	// Append as JSON string + newline
+	b, err := json.Marshal(entry)
+	if err != nil {
+		return err
+	}
+	f, err := os.OpenFile(app.historyFilePath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := f.Write(append(b, '\n')); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Config returns the application configuration.
