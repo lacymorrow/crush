@@ -9,8 +9,8 @@ import (
 
 	_ "github.com/joho/godotenv/autoload" // automatically load .env files
 
-    "github.com/lacymorrow/lash/internal/cmd"
-    "github.com/lacymorrow/lash/internal/log"
+	"github.com/lacymorrow/lash/internal/cmd"
+	"github.com/lacymorrow/lash/internal/log"
 )
 
 func main() {
@@ -18,7 +18,8 @@ func main() {
 		slog.Error("Application terminated due to unhandled panic")
 	})
 
-    if os.Getenv("CRUSH_PROFILE") != "" {
+	// Prefer LASH_ env var, fallback to legacy CRUSH_ for compatibility
+	if os.Getenv("LASH_PROFILE") != "" || os.Getenv("CRUSH_PROFILE") != "" {
 		go func() {
 			slog.Info("Serving pprof at localhost:6060")
 			if httpErr := http.ListenAndServe("localhost:6060", nil); httpErr != nil {

@@ -25,7 +25,10 @@ func CoderPrompt(p string, contextFiles ...string) string {
 	case string(catwalk.InferenceProviderGemini):
 		basePrompt = string(geminiCoderPrompt)
 	}
-	if ok, _ := strconv.ParseBool(os.Getenv("CRUSH_CODER_V2")); ok {
+	// Prefer LASH_ env var, fallback to legacy CRUSH_ for compatibility
+	if ok, _ := strconv.ParseBool(os.Getenv("LASH_CODER_V2")); ok {
+		basePrompt = string(coderV2Prompt)
+	} else if ok, _ := strconv.ParseBool(os.Getenv("CRUSH_CODER_V2")); ok {
 		basePrompt = string(coderV2Prompt)
 	}
 	envInfo := getEnvironmentInfo()
