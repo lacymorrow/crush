@@ -86,7 +86,7 @@ func (d *anthropicOAuthDialog) Init() tea.Cmd {
 		func() tea.Msg {
 			url, verifier, err := auth.AuthorizeURL("max")
 			if err != nil {
-				return util.ReportError(fmt.Errorf("failed to start OAuth: %w", err))
+				return util.InfoMsg{Type: util.InfoTypeError, Msg: fmt.Sprintf("failed to start OAuth: %v", err)}
 			}
 			d.url = url
 			d.verifier = verifier
@@ -115,8 +115,15 @@ func (d *anthropicOAuthDialog) openBrowserCmd() tea.Cmd {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		_ = cmd.Start()
-		return util.ReportInfo("Opened browser for Claude Max sign-in")
+		return util.InfoMsg{Type: util.InfoTypeInfo, Msg: "Opened browser for Claude Max sign-in"}
 	}
+}
+
+// oauthSuccessMsg is emitted when token exchange succeeded
+type oauthSuccessMsg struct {
+	providerID string
+	modelID    string
+	modelType  config.SelectedModelType
 }
 
 func (d *anthropicOAuthDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -145,6 +152,15 @@ func (d *anthropicOAuthDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			d.status = "Exchanging code..."
 			return d, d.exchangeCmd(code)
 		}
+	case oauthSuccessMsg:
+		// Close and propagate selection
+		return d, tea.Sequence(
+			util.CmdHandler(dialogs.CloseDialogMsg{}),
+			util.CmdHandler(ModelSelectedMsg{
+				Model:     config.SelectedModel{Model: m.modelID, Provider: m.providerID},
+				ModelType: m.modelType,
+			}),
+		)
 	}
 	var cmd tea.Cmd
 	d.codeInput, cmd = d.codeInput.Update(msg)
@@ -161,10 +177,10 @@ func (d *anthropicOAuthDialog) exchangeCmd(code string) tea.Cmd {
 		_ = ctx // reserved if we move to http.Client with ctx
 		info, err := auth.ExchangeCode(code, d.verifier)
 		if err != nil {
-			return util.ReportError(fmt.Errorf("OAuth exchange failed: %w", err))
+			return util.InfoMsg{Type: util.InfoTypeError, Msg: fmt.Sprintf("OAuth exchange failed: %v", err)}
 		}
 		if err := auth.Set("anthropic", info); err != nil {
-			return util.ReportError(fmt.Errorf("failed to persist OAuth tokens: %w", err))
+			return util.InfoMsg{Type: util.InfoTypeError, Msg: fmt.Sprintf("failed to persist OAuth tokens: %v", err)}
 		}
 		// Configure provider API key as Bearer token for synthetic provider
 		token := info.Access
@@ -202,14 +218,7 @@ func (d *anthropicOAuthDialog) exchangeCmd(code string) tea.Cmd {
 		_ = cfg.SetConfigField("providers."+providerID, pc)
 		cfg.Providers.Set(providerID, pc)
 
-		// Close dialog and select model
-		return tea.Sequence(
-			util.CmdHandler(dialogs.CloseDialogMsg{}),
-			util.CmdHandler(ModelSelectedMsg{
-				Model:     config.SelectedModel{Model: modelID, Provider: providerID},
-				ModelType: modelType,
-			}),
-		)
+		return oauthSuccessMsg{providerID: providerID, modelID: modelID, modelType: modelType}
 	}
 }
 

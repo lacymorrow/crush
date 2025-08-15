@@ -172,6 +172,16 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.completions = u.(completions.Completions)
 		return a, tea.Batch(completionCmd, a.handleWindowResize(msg.Width, msg.Height))
 
+	// Terminal resumed (e.g., after suspend or losing window focus). Re-apply layout
+	// and give the active page a chance to restore focus.
+	case tea.ResumeMsg:
+		var cmds []tea.Cmd
+		cmds = append(cmds, a.handleWindowResize(a.wWidth, a.wHeight))
+		updated, pageCmd := a.pages[a.currentPage].Update(msg)
+		a.pages[a.currentPage] = updated.(util.Model)
+		cmds = append(cmds, pageCmd)
+		return a, tea.Batch(cmds...)
+
 	// Completions messages
 	case completions.OpenCompletionsMsg, completions.FilterCompletionsMsg,
 		completions.CloseCompletionsMsg, completions.RepositionCompletionsMsg:

@@ -273,6 +273,25 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		u, cmd := p.editor.Update(msg)
 		p.editor = u.(editor.Editor)
 		return p, tea.Batch(p.SetSize(msg.Width, msg.Height), cmd)
+	case tea.ResumeMsg:
+		// Re-apply sizing and restore focus to the visible pane on resume.
+		var cmds []tea.Cmd
+		cmds = append(cmds, p.SetSize(p.width, p.height))
+		// When in splash fullscreen, keep focus there; otherwise, ensure editor/chat focus matches state
+		switch p.focusedPane {
+		case PanelTypeSplash:
+			if p.session.ID == "" {
+				p.chat.Blur()
+				p.editor.Blur()
+			}
+		case PanelTypeEditor:
+			p.editor.Focus()
+			p.chat.Blur()
+		case PanelTypeChat:
+			p.chat.Focus()
+			p.editor.Blur()
+		}
+		return p, tea.Batch(cmds...)
 	case CancelTimerExpiredMsg:
 		p.isCanceling = false
 		return p, nil
