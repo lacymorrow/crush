@@ -66,6 +66,8 @@ func NewAnthropicOAuthDialogCmp(option *ModelOption, modelType config.SelectedMo
 	ti.SetVirtualCursor(false)
 	ti.Prompt = "> "
 	ti.SetStyles(t.S().TextInput)
+	// Keep input wide enough so placeholder isn't truncated (dialog width 70)
+	ti.SetWidth(66)
 	ti.Focus()
 
 	return &anthropicOAuthDialog{
@@ -131,6 +133,8 @@ func (d *anthropicOAuthDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		d.wWidth = m.Width
 		d.wHeight = m.Height
+		// Ensure input width stays in sync with dialog width
+		d.codeInput.SetWidth(d.width - 4)
 		return d, nil
 	case tea.KeyPressMsg:
 		switch {
