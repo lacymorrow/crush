@@ -9,6 +9,7 @@ type EditorKeyMap struct {
 	SendMessage key.Binding
 	OpenEditor  key.Binding
 	Newline     key.Binding
+	ClearInput  key.Binding
 }
 
 func DefaultEditorKeyMap() EditorKeyMap {
@@ -29,6 +30,10 @@ func DefaultEditorKeyMap() EditorKeyMap {
 			key.WithKeys("shift+enter", "ctrl+j"),
 			key.WithHelp("shift+enter", "newline"),
 		),
+		ClearInput: key.NewBinding(
+			key.WithKeys("ctrl+c", "cmd+backspace"),
+			key.WithHelp("ctrl+c", "clear input"),
+		),
 	}
 }
 
@@ -39,6 +44,7 @@ func (k EditorKeyMap) KeyBindings() []key.Binding {
 		k.SendMessage,
 		k.OpenEditor,
 		k.Newline,
+		k.ClearInput,
 		AttachmentsKeyMaps.AttachmentDeleteMode,
 		AttachmentsKeyMaps.DeleteAllAttachments,
 		AttachmentsKeyMaps.Escape,

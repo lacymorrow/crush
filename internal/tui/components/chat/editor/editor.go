@@ -318,6 +318,17 @@ func (m *editorCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, util.CmdHandler(completions.CloseCompletionsMsg{}))
 		}
 
+		// Clear input: ctrl+c or cmd+backspace
+		if key.Matches(msg, m.keyMap.ClearInput) && m.textarea.Focused() {
+			if strings.TrimSpace(m.textarea.Value()) != "" {
+				m.textarea.Reset()
+				// consume event so app doesn't open quit dialog
+				return m, nil
+			}
+			// empty input: open quit dialog (handled here to avoid global help flicker)
+			return m, util.CmdHandler(dialogs.OpenDialogMsg{Model: quit.NewQuitDialog()})
+		}
+
 		// History navigation: Up/Down (global, across sessions)
 		if msg.String() == "up" || msg.String() == "down" {
 			// Only handle when focused and not deleting attachments and not showing completions

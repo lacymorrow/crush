@@ -444,6 +444,25 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 			return cmd
 		}
 	}
+	// Immediate quit on Ctrl+D (EOF)
+	if key.Matches(msg, a.keyMap.QuitEOF) {
+		return tea.Quit
+	}
+	// Allow pages to consume Ctrl+C (clear input) before opening quit dialog
+	if key.Matches(msg, a.keyMap.Quit) {
+		if a.dialog.HasDialogs() {
+			if a.dialog.ActiveDialogID() == quit.QuitDialogID {
+				return tea.Quit
+			}
+			return nil
+		}
+		updated, pageCmd := a.pages[a.currentPage].Update(msg)
+		a.pages[a.currentPage] = updated.(util.Model)
+		if pageCmd != nil {
+			return pageCmd
+		}
+		return util.CmdHandler(dialogs.OpenDialogMsg{Model: quit.NewQuitDialog()})
+	}
 	switch {
 	// help
 	case key.Matches(msg, a.keyMap.Help):
@@ -451,14 +470,6 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 		a.showingFullHelp = !a.showingFullHelp
 		return a.handleWindowResize(a.wWidth, a.wHeight)
 	// dialogs
-	case key.Matches(msg, a.keyMap.Quit), key.Matches(msg, a.keyMap.QuitEOF):
-		if a.dialog.ActiveDialogID() == quit.QuitDialogID {
-			return tea.Quit
-		}
-		return util.CmdHandler(dialogs.OpenDialogMsg{
-			Model: quit.NewQuitDialog(),
-		})
-
 	case key.Matches(msg, a.keyMap.Commands):
 		// if the app is not configured show no commands
 		if !a.isConfigured {
