@@ -21,6 +21,7 @@ import (
 	"github.com/lacymorrow/lash/internal/fsext"
 	"github.com/lacymorrow/lash/internal/message"
 	"github.com/lacymorrow/lash/internal/session"
+	"github.com/lacymorrow/lash/internal/shell"
 	"github.com/lacymorrow/lash/internal/tui/components/chat"
 	"github.com/lacymorrow/lash/internal/tui/components/completions"
 	"github.com/lacymorrow/lash/internal/tui/components/core/layout"
@@ -96,7 +97,8 @@ var DeleteKeyMaps = DeleteAttachmentKeyMaps{
 }
 
 const (
-	maxAttachments = 5
+	maxAttachments      = 5
+	maxSlashCompletions = 500
 )
 
 type OpenEditorMsg struct {
@@ -524,18 +526,29 @@ func (m *editorCmp) View() string {
 	if m.app.Permissions.SkipRequests() {
 		m.textarea.Placeholder = "Yolo mode!"
 	}
+	// Shell-like PWD near the input
+	liveCwd := shell.GetUserPersistentShell(m.app.Config().WorkingDir()).GetWorkingDir()
+	if liveCwd == "" {
+		liveCwd = m.app.Config().WorkingDir()
+	}
+	cwd := fsext.DirTrim(fsext.PrettyPath(liveCwd), 4)
+	cwdView := t.S().Base.Foreground(t.Secondary).Render(cwd)
 	// If no active session and input is empty, hint about sessions
 	if m.session.ID == "" && strings.TrimSpace(m.textarea.Value()) == "" {
 		m.textarea.Placeholder = " Press Enter for recent sessions"
 	}
 	if len(m.attachments) == 0 {
-		content := t.S().Base.Padding(1).Render(
-			m.textarea.View(),
+		content := t.S().Base.Padding(0, 1, 1, 1).Render(
+			lipgloss.JoinVertical(lipgloss.Left,
+				cwdView,
+				m.textarea.View(),
+			),
 		)
 		return content
 	}
 	content := t.S().Base.Padding(0, 1, 1, 1).Render(
 		lipgloss.JoinVertical(lipgloss.Top,
+			cwdView,
 			m.attachmentsContent(),
 			m.textarea.View(),
 		),
@@ -585,7 +598,7 @@ func (m *editorCmp) SetPosition(x, y int) tea.Cmd {
 }
 
 func (m *editorCmp) startCompletions() tea.Msg {
-	files, _, _ := fsext.ListDirectory(".", nil, 0)
+	files, _, _ := fsext.ListDirectory(".", nil, maxSlashCompletions)
 	completionItems := make([]completions.Completion, 0, len(files))
 	for _, file := range files {
 		file = strings.TrimPrefix(file, "./")

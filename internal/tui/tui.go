@@ -80,6 +80,18 @@ type appModel struct {
 	activeMode string
 }
 
+// routeToActive routes a message to the active dialog if present, otherwise to the current page.
+func (a *appModel) routeToActive(msg tea.Msg) tea.Cmd {
+	if a.dialog.HasDialogs() {
+		u, dialogCmd := a.dialog.Update(msg)
+		a.dialog = u.(dialogs.DialogCmp)
+		return dialogCmd
+	}
+	updated, pageCmd := a.pages[a.currentPage].Update(msg)
+	a.pages[a.currentPage] = updated.(util.Model)
+	return pageCmd
+}
+
 // ActiveMode returns the current mode string (Shell/Agent/Auto)
 func (a *appModel) ActiveMode() string { return a.activeMode }
 
@@ -156,8 +168,9 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, tea.Batch(cmds...)
 	case tea.WindowSizeMsg:
 		a.wWidth, a.wHeight = msg.Width, msg.Height
-		a.completions.Update(msg)
-		return a, a.handleWindowResize(msg.Width, msg.Height)
+		u, completionCmd := a.completions.Update(msg)
+		a.completions = u.(completions.Completions)
+		return a, tea.Batch(completionCmd, a.handleWindowResize(msg.Width, msg.Height))
 
 	// Completions messages
 	case completions.OpenCompletionsMsg, completions.FilterCompletionsMsg,
@@ -225,6 +238,9 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 	case commands.ToggleYoloModeMsg:
 		// Toggle YOLO skip mode
+		if a.app == nil || a.app.Permissions == nil {
+			return a, util.ReportError(fmt.Errorf("permissions service unavailable"))
+		}
 		newSkip := !a.app.Permissions.SkipRequests()
 		a.app.Permissions.SetSkipRequests(newSkip)
 		a.status.SetLeft(a.renderLeftPrefix())
@@ -318,13 +334,15 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Model: permissions.NewPermissionDialogCmp(msg.Payload),
 		})
 	case permissions.PermissionResponseMsg:
-		switch msg.Action {
-		case permissions.PermissionAllow:
-			a.app.Permissions.Grant(msg.Permission)
-		case permissions.PermissionAllowForSession:
-			a.app.Permissions.GrantPersistent(msg.Permission)
-		case permissions.PermissionDeny:
-			a.app.Permissions.Deny(msg.Permission)
+		if a.app != nil && a.app.Permissions != nil {
+			switch msg.Action {
+			case permissions.PermissionAllow:
+				a.app.Permissions.Grant(msg.Permission)
+			case permissions.PermissionAllowForSession:
+				a.app.Permissions.GrantPersistent(msg.Permission)
+			case permissions.PermissionDeny:
+				a.app.Permissions.Deny(msg.Permission)
+			}
 		}
 		return a, nil
 	// Agent Events
@@ -346,7 +364,9 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				model := a.app.CoderAgent.Model()
 				contextWindow := model.ContextWindow
 				tokens := session.CompletionTokens + session.PromptTokens
-				if (tokens >= int64(float64(contextWindow)*0.95)) && !config.Get().Options.DisableAutoSummarize { // Show compact confirmation dialog
+				cfg := config.Get()
+				disableAuto := cfg.Options != nil && cfg.Options.DisableAutoSummarize
+				if (tokens >= int64(float64(contextWindow)*0.95)) && !disableAuto { // Show compact confirmation dialog
 					cmds = append(cmds, util.CmdHandler(dialogs.OpenDialogMsg{
 						Model: compact.NewCompactDialogCmp(a.app.CoderAgent, a.selectedSessionID, false),
 					}))
@@ -366,27 +386,9 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, a.handleKeyPressMsg(msg)
 
 	case tea.MouseWheelMsg:
-		if a.dialog.HasDialogs() {
-			u, dialogCmd := a.dialog.Update(msg)
-			a.dialog = u.(dialogs.DialogCmp)
-			cmds = append(cmds, dialogCmd)
-		} else {
-			updated, pageCmd := a.pages[a.currentPage].Update(msg)
-			a.pages[a.currentPage] = updated.(util.Model)
-			cmds = append(cmds, pageCmd)
-		}
-		return a, tea.Batch(cmds...)
+		return a, a.routeToActive(msg)
 	case tea.PasteMsg:
-		if a.dialog.HasDialogs() {
-			u, dialogCmd := a.dialog.Update(msg)
-			a.dialog = u.(dialogs.DialogCmp)
-			cmds = append(cmds, dialogCmd)
-		} else {
-			updated, pageCmd := a.pages[a.currentPage].Update(msg)
-			a.pages[a.currentPage] = updated.(util.Model)
-			cmds = append(cmds, pageCmd)
-		}
-		return a, tea.Batch(cmds...)
+		return a, a.routeToActive(msg)
 	}
 	s, _ := a.status.Update(msg)
 	a.status = s.(status.StatusCmp)
@@ -522,7 +524,9 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 		a.status.SetLeft(a.renderLeftPrefix())
 		a.app.Mode = a.activeMode
 		// Persist last selected mode using config helper
-		_ = config.Get().SetActiveMode(a.activeMode)
+		if err := config.Get().SetActiveMode(a.activeMode); err != nil {
+			return tea.Batch(util.ReportWarn("failed to persist mode: "+err.Error()), a.handleWindowResize(a.wWidth, a.wHeight))
+		}
 		return a.handleWindowResize(a.wWidth, a.wHeight)
 	case key.Matches(msg, a.keyMap.ToggleYolo):
 		// Route through the common handler so pages update their prompts/styles
@@ -539,16 +543,26 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 		}
 		newVal := !current
 		cfg.Lash.Safety.ConfirmAgentExec = &newVal
-		_ = cfg.SetConfigField("lash.safety.confirm_agent_exec", newVal)
+		persistErr := cfg.SetConfigField("lash.safety.confirm_agent_exec", newVal)
 		// Update permission service allowlist live
 		currentAllowed := []string{"bash", "bash:execute"}
-		if newVal == false {
+		if !newVal {
 			// enable auto-confirm: allow bash executions without prompts
-			a.app.Permissions.SetAllowedTools(currentAllowed)
+			if a.app != nil && a.app.Permissions != nil {
+				a.app.Permissions.SetAllowedTools(currentAllowed)
+			}
+			if persistErr != nil {
+				return tea.Batch(util.ReportWarn("failed to persist auto-confirm: "+persistErr.Error()), util.ReportInfo("Auto-confirm enabled"))
+			}
 			return util.ReportInfo("Auto-confirm enabled")
 		}
 		// disable auto-confirm: remove from allowlist by setting empty list
-		a.app.Permissions.SetAllowedTools([]string{})
+		if a.app != nil && a.app.Permissions != nil {
+			a.app.Permissions.SetAllowedTools([]string{})
+		}
+		if persistErr != nil {
+			return tea.Batch(util.ReportWarn("failed to persist auto-confirm: "+persistErr.Error()), util.ReportInfo("Auto-confirm disabled"))
+		}
 		return util.ReportInfo("Auto-confirm disabled")
 	case key.Matches(msg, a.keyMap.Suspend):
 		if a.app.CoderAgent != nil && a.app.CoderAgent.IsBusy() {

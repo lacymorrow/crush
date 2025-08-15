@@ -17,6 +17,7 @@ import (
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/vertex"
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
+	"github.com/lacymorrow/lash/internal/auth"
 	"github.com/lacymorrow/lash/internal/config"
 	"github.com/lacymorrow/lash/internal/llm/tools"
 	"github.com/lacymorrow/lash/internal/log"
@@ -482,6 +483,16 @@ func (a *anthropicClient) shouldRetry(attempts int, err error) (bool, int64, err
 	}
 
 	if apiErr.StatusCode == 401 {
+		// Try refresh via OAuth first
+		if token, terr := auth.AccessToken("anthropic"); terr == nil && token != "" {
+			if !strings.HasPrefix(token, config.BearerPrefix) {
+				token = config.BearerPrefix + token
+			}
+			a.providerOptions.apiKey = token
+			a.client = createAnthropicClient(a.providerOptions, a.tp)
+			return true, 0, nil
+		}
+		// Fallback to resolving configured API key (might be env)
 		a.providerOptions.apiKey, err = config.Get().Resolve(a.providerOptions.config.APIKey)
 		if err != nil {
 			return false, 0, fmt.Errorf("failed to resolve API key: %w", err)

@@ -208,6 +208,16 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return p, nil
 	case tea.MouseClickMsg:
+		// If splash is full screen, it is the only visible/interactive view.
+		// Do not change focus away from the splash or route clicks to hidden components.
+		if p.session.ID == "" && p.splashFullScreen {
+			p.focusedPane = PanelTypeSplash
+			p.chat.Blur()
+			p.editor.Blur()
+			u, cmd := p.splash.Update(msg)
+			p.splash = u.(splash.Splash)
+			return p, cmd
+		}
 		if p.compact {
 			msg.Y -= 1
 		}
@@ -227,6 +237,12 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if p.compact {
 			msg.Y -= 1
 		}
+		if p.session.ID == "" && p.splashFullScreen && msg.Button == tea.MouseLeft {
+			p.focusedPane = PanelTypeSplash
+			u, cmd := p.splash.Update(msg)
+			p.splash = u.(splash.Splash)
+			return p, cmd
+		}
 		if msg.Button == tea.MouseLeft {
 			u, cmd := p.chat.Update(msg)
 			p.chat = u.(chat.MessageListCmp)
@@ -236,6 +252,12 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseReleaseMsg:
 		if p.compact {
 			msg.Y -= 1
+		}
+		if p.session.ID == "" && p.splashFullScreen && msg.Button == tea.MouseLeft {
+			p.focusedPane = PanelTypeSplash
+			u, cmd := p.splash.Update(msg)
+			p.splash = u.(splash.Splash)
+			return p, cmd
 		}
 		if msg.Button == tea.MouseLeft {
 			u, cmd := p.chat.Update(msg)
@@ -373,6 +395,10 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return p, p.newSession()
 	case tea.KeyPressMsg:
+		// If splash is full screen, ensure focus and input are routed to it regardless of previous focus state.
+		if p.session.ID == "" && p.splashFullScreen {
+			p.focusedPane = PanelTypeSplash
+		}
 		switch {
 		case key.Matches(msg, p.keyMap.NewSession):
 			// if we have no agent do nothing
@@ -423,6 +449,10 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 		}
 	case tea.PasteMsg:
+		// If splash is full screen, ensure paste goes to splash input.
+		if p.session.ID == "" && p.splashFullScreen {
+			p.focusedPane = PanelTypeSplash
+		}
 		switch p.focusedPane {
 		case PanelTypeEditor:
 			u, cmd := p.editor.Update(msg)

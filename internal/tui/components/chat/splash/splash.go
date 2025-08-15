@@ -16,6 +16,7 @@ import (
 	"github.com/lacymorrow/lash/internal/tui/components/chat"
 	"github.com/lacymorrow/lash/internal/tui/components/core"
 	"github.com/lacymorrow/lash/internal/tui/components/core/layout"
+	"github.com/lacymorrow/lash/internal/tui/components/dialogs"
 	"github.com/lacymorrow/lash/internal/tui/components/dialogs/models"
 	"github.com/lacymorrow/lash/internal/tui/components/logo"
 	lspcomponent "github.com/lacymorrow/lash/internal/tui/components/lsp"
@@ -177,6 +178,12 @@ func (s *splashCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if selectedItem == nil {
 					return s, nil
 				}
+				// If Anthropic Max (Sonnet/Opus) and provider not configured, start OAuth dialog instead of API key
+				if isAnthropicMaxModel(selectedItem) && !s.isProviderConfigured(string(selectedItem.Provider.ID)) {
+					return s, util.CmdHandler(
+						dialogs.OpenDialogMsg{Model: models.NewAnthropicOAuthDialogCmp(selectedItem, config.SelectedModelTypeLarge)},
+					)
+				}
 				if s.isProviderConfigured(string(selectedItem.Provider.ID)) {
 					cmd := s.setPreferredModel(*selectedItem)
 					s.isOnboarding = false
@@ -190,6 +197,14 @@ func (s *splashCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			} else if s.needsAPIKey {
 				// Handle API key submission
+				if s.selectedModel != nil && isAnthropicMaxModel(s.selectedModel) && !s.isProviderConfigured(string(s.selectedModel.Provider.ID)) {
+					// Force OAuth flow when trying to submit API key for Anthropic Max during onboarding
+					s.needsAPIKey = false
+					s.isAPIKeyValid = false
+					s.apiKeyValue = ""
+					s.apiKeyInput.Reset()
+					return s, util.CmdHandler(dialogs.OpenDialogMsg{Model: models.NewAnthropicOAuthDialogCmp(s.selectedModel, config.SelectedModelTypeLarge)})
+				}
 				s.apiKeyValue = strings.TrimSpace(s.apiKeyInput.Value())
 				if s.apiKeyValue == "" {
 					return s, nil
@@ -418,6 +433,20 @@ func (s *splashCmp) isProviderConfigured(providerID string) bool {
 	return false
 }
 
+// isAnthropicMaxModel returns true for Sonnet/Opus models under the Anthropic provider
+func isAnthropicMaxModel(opt *models.ModelOption) bool {
+	if opt == nil {
+		return false
+	}
+	// Only synthetic max provider triggers OAuth
+	if string(opt.Provider.ID) != "anthropic-max" {
+		return false
+	}
+	id := strings.ToLower(opt.Model.ID)
+	name := strings.ToLower(opt.Model.Name)
+	return strings.Contains(id, "sonnet") || strings.Contains(id, "opus") || strings.Contains(name, "sonnet") || strings.Contains(name, "opus")
+}
+
 func (s *splashCmp) View() string {
 	t := styles.CurrentTheme()
 	var content string
@@ -546,8 +575,6 @@ func (s *splashCmp) infoSection() string {
 	return infoStyle.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
-			s.cwd(),
-			"",
 			s.currentModelBlock(),
 			"",
 			lipgloss.JoinHorizontal(lipgloss.Left, s.lspBlock(), s.mcpBlock()),

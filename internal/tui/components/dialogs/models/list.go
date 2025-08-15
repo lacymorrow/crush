@@ -187,6 +187,70 @@ func (m *ModelListComponent) SetModelType(modelType int) tea.Cmd {
 		}
 	}
 
+	// Insert Anthropic Max section (Sonnet/Opus) when Anthropic provider is available
+	// This provides a dedicated Max entry that will trigger OAuth when not configured
+	var anthropicProvider *catwalk.Provider
+	for i := range knownProviders {
+		p := knownProviders[i]
+		if p.ID == catwalk.InferenceProviderAnthropic {
+			anthropicProvider = &p
+			break
+		}
+	}
+	if anthropicProvider != nil {
+		// Try to pick latest Sonnet and Opus models
+		var sonnet *catwalk.Model
+		var opus *catwalk.Model
+		for i := range anthropicProvider.Models {
+			mdl := anthropicProvider.Models[i]
+			idLower := strings.ToLower(mdl.ID)
+			nameLower := strings.ToLower(mdl.Name)
+			if sonnet == nil && (strings.Contains(idLower, "sonnet") || strings.Contains(nameLower, "sonnet")) {
+				sonnet = &mdl
+			}
+			if opus == nil && (strings.Contains(idLower, "opus") || strings.Contains(nameLower, "opus")) {
+				opus = &mdl
+			}
+		}
+		if sonnet != nil || opus != nil {
+			name := "Anthropic Max"
+			section := list.NewItemSection(name)
+			if _, ok := cfg.Providers.Get("anthropic-max"); ok {
+				section.SetInfo(configured)
+			}
+			// Create a synthetic provider representing Anthropic Max for OAuth flow separation
+			maxProvider := catwalk.Provider{
+				Name:        name,
+				ID:          catwalk.InferenceProvider("anthropic-max"),
+				APIEndpoint: anthropicProvider.APIEndpoint,
+				Type:        anthropicProvider.Type,
+			}
+			group := list.Group[list.CompletionItem[ModelOption]]{Section: section}
+			addModel := func(mdl *catwalk.Model) {
+				if mdl == nil {
+					return
+				}
+				item := list.NewCompletionItem(mdl.Name, ModelOption{
+					Provider: maxProvider,
+					Model:    *mdl,
+				},
+					list.WithCompletionID(
+						fmt.Sprintf("%s:%s:max", maxProvider.ID, mdl.ID),
+					),
+				)
+				group.Items = append(group.Items, item)
+				if mdl.ID == currentModel.Model && "anthropic-max" == currentModel.Provider {
+					selectedItemID = item.ID()
+				}
+			}
+			addModel(sonnet)
+			addModel(opus)
+			if len(group.Items) > 0 {
+				groups = append(groups, group)
+			}
+		}
+	}
+
 	// Then add the known providers from the predefined list
 	for _, provider := range m.providers {
 		// Skip if we already added this provider as an unknown provider

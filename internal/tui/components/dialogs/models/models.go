@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"strings"
+
 	"github.com/charmbracelet/bubbles/v2/help"
 	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/bubbles/v2/spinner"
@@ -113,6 +115,27 @@ func (m *modelDialogCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, m.keyMap.Select):
+			// Always determine current selection and model type first
+			selectedItem := m.modelList.SelectedModel()
+			var modelType config.SelectedModelType
+			if m.modelList.GetModelType() == LargeModelType {
+				modelType = config.SelectedModelTypeLarge
+			} else {
+				modelType = config.SelectedModelTypeSmall
+			}
+
+			// For Anthropic Max (Sonnet/Opus), force OAuth dialog when provider isn't configured
+			if selectedItem != nil && isAnthropicMaxModel(selectedItem) && !m.isProviderConfigured(string(selectedItem.Provider.ID)) {
+				m.selectedModel = selectedItem
+				m.selectedModelType = modelType
+				// ensure API key mode is cleared
+				m.needsAPIKey = false
+				m.isAPIKeyValid = false
+				m.apiKeyValue = ""
+				m.apiKeyInput.Reset()
+				return m, util.CmdHandler(dialogs.OpenDialogMsg{Model: NewAnthropicOAuthDialogCmp(selectedItem, modelType)})
+			}
+
 			if m.isAPIKeyValid {
 				return m, m.saveAPIKeyAndContinue(m.apiKeyValue)
 			}
@@ -154,18 +177,9 @@ func (m *modelDialogCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					},
 				)
 			}
-			// Normal model selection
-			selectedItem := m.modelList.SelectedModel()
-
-			var modelType config.SelectedModelType
-			if m.modelList.GetModelType() == LargeModelType {
-				modelType = config.SelectedModelTypeLarge
-			} else {
-				modelType = config.SelectedModelTypeSmall
-			}
 
 			// Check if provider is configured
-			if m.isProviderConfigured(string(selectedItem.Provider.ID)) {
+			if selectedItem != nil && m.isProviderConfigured(string(selectedItem.Provider.ID)) {
 				return m, tea.Sequence(
 					util.CmdHandler(dialogs.CloseDialogMsg{}),
 					util.CmdHandler(ModelSelectedMsg{
@@ -176,14 +190,15 @@ func (m *modelDialogCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						ModelType: modelType,
 					}),
 				)
-			} else {
-				// Provider not configured, show API key input
+			}
+			// Provider not configured, show API key input (non-Anthropic Max)
+			if selectedItem != nil {
 				m.needsAPIKey = true
 				m.selectedModel = selectedItem
 				m.selectedModelType = modelType
 				m.apiKeyInput.SetProviderName(selectedItem.Provider.Name)
-				return m, nil
 			}
+			return m, nil
 		case key.Matches(msg, m.keyMap.Tab):
 			if m.needsAPIKey {
 				u, cmd := m.apiKeyInput.Update(msg)
@@ -328,6 +343,20 @@ func (m *modelDialogCmp) moveCursor(cursor *tea.Cursor) *tea.Cursor {
 
 func (m *modelDialogCmp) ID() dialogs.DialogID {
 	return ModelsDialogID
+}
+
+// isAnthropicMaxModel returns true for Sonnet/Opus models under the Anthropic provider
+func isAnthropicMaxModel(opt *ModelOption) bool {
+	if opt == nil {
+		return false
+	}
+	// Only synthetic max provider triggers OAuth
+	if string(opt.Provider.ID) != "anthropic-max" {
+		return false
+	}
+	id := strings.ToLower(opt.Model.ID)
+	name := strings.ToLower(opt.Model.Name)
+	return strings.Contains(id, "sonnet") || strings.Contains(id, "opus") || strings.Contains(name, "sonnet") || strings.Contains(name, "opus")
 }
 
 func (m *modelDialogCmp) modelTypeRadio() string {

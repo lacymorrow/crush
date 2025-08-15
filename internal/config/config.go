@@ -430,6 +430,16 @@ func (c *Config) GetModel(provider, model string) *catwalk.Model {
 			}
 		}
 	}
+	// Support synthetic Anthropic Max provider by falling back to real Anthropic catalog
+	if provider == "anthropic-max" {
+		if providerConfig, ok := c.Providers.Get(string(catwalk.InferenceProviderAnthropic)); ok {
+			for _, m := range providerConfig.Models {
+				if m.ID == model {
+					return &m
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -471,6 +481,9 @@ func (c *Config) SmallModel() *catwalk.Model {
 func (c *Config) SetCompactMode(enabled bool) error {
 	if c.Options == nil {
 		c.Options = &Options{}
+	}
+	if c.Options.TUI == nil {
+		c.Options.TUI = &TUIOptions{}
 	}
 	c.Options.TUI.CompactMode = enabled
 	return c.SetConfigField("options.tui.compact_mode", enabled)
@@ -608,7 +621,12 @@ func (c *ProviderConfig) TestConnection(resolver VariableResolver) error {
 			baseURL = DefaultAnthropicBaseURL
 		}
 		testURL = baseURL + "/models"
-		headers[HeaderXAPIKey] = apiKey
+		// Support both X-Api-Key and Authorization: Bearer
+		if strings.HasPrefix(strings.TrimSpace(apiKey), BearerPrefix) {
+			headers[HeaderAuthorization] = apiKey
+		} else {
+			headers[HeaderXAPIKey] = apiKey
+		}
 		headers[HeaderAnthropicVersion] = DefaultAnthropicAPIVer
 	case catwalk.TypeGemini:
 		baseURL, _ := resolver.ResolveValue(c.BaseURL)

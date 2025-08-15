@@ -7,12 +7,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/lacymorrow/lash/internal/config"
-	"github.com/lacymorrow/lash/internal/fsext"
 	"github.com/lacymorrow/lash/internal/lsp"
 	"github.com/lacymorrow/lash/internal/lsp/protocol"
 	"github.com/lacymorrow/lash/internal/pubsub"
 	"github.com/lacymorrow/lash/internal/session"
-	"github.com/lacymorrow/lash/internal/shell"
 	"github.com/lacymorrow/lash/internal/tui/styles"
 	"github.com/lacymorrow/lash/internal/tui/util"
 )
@@ -89,15 +87,7 @@ func (p *header) View() string {
 
 func (h *header) details() string {
 	t := styles.CurrentTheme()
-	// Prefer the live cwd from the persistent user shell; fall back to config cwd
-	liveCwd := shell.GetUserPersistentShell(config.Get().WorkingDir()).GetWorkingDir()
-	if liveCwd == "" {
-		liveCwd = config.Get().WorkingDir()
-	}
-	cwd := fsext.DirTrim(fsext.PrettyPath(liveCwd), 4)
-	parts := []string{
-		t.S().Muted.Render(cwd),
-	}
+	parts := []string{}
 
 	errorCount := 0
 	for _, l := range h.lspClients {
