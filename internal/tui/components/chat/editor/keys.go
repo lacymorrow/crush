@@ -64,8 +64,8 @@ var AttachmentsKeyMaps = DeleteAttachmentKeyMaps{
 		key.WithHelp("ctrl+r+{i}", "delete attachment at index i"),
 	),
 	Escape: key.NewBinding(
-		key.WithKeys("esc"),
-		key.WithHelp("esc", "cancel delete mode"),
+		key.WithKeys("esc", "ctrl+c"),
+		key.WithHelp("esc/ctrl+c", "cancel delete mode"),
 	),
 	DeleteAllAttachments: key.NewBinding(
 		key.WithKeys("r"),

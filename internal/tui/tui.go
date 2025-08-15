@@ -460,13 +460,20 @@ func (a *appModel) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 	if key.Matches(msg, a.keyMap.QuitEOF) {
 		return tea.Quit
 	}
-	// Allow pages to consume Ctrl+C (clear input) before opening quit dialog
+	// Treat Ctrl+C like Esc for open menus/dialogs; otherwise follow quit flow
 	if key.Matches(msg, a.keyMap.Quit) {
+		// If completions popup is open, close it (acts like Esc)
+		if a.completions.Open() {
+			u, cmd := a.completions.Update(completions.CloseCompletionsMsg{})
+			a.completions = u.(completions.Completions)
+			return cmd
+		}
 		if a.dialog.HasDialogs() {
 			if a.dialog.ActiveDialogID() == quit.QuitDialogID {
 				return tea.Quit
 			}
-			return nil
+			// Close the topmost dialog (acts like Esc)
+			return util.CmdHandler(dialogs.CloseDialogMsg{})
 		}
 		updated, pageCmd := a.pages[a.currentPage].Update(msg)
 		a.pages[a.currentPage] = updated.(util.Model)
