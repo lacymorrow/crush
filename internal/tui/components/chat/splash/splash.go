@@ -16,7 +16,6 @@ import (
 	"github.com/lacymorrow/lash/internal/tui/components/chat"
 	"github.com/lacymorrow/lash/internal/tui/components/core"
 	"github.com/lacymorrow/lash/internal/tui/components/core/layout"
-	"github.com/lacymorrow/lash/internal/tui/components/dialogs"
 	"github.com/lacymorrow/lash/internal/tui/components/dialogs/models"
 	"github.com/lacymorrow/lash/internal/tui/components/logo"
 	lspcomponent "github.com/lacymorrow/lash/internal/tui/components/lsp"
@@ -65,6 +64,7 @@ type splashCmp struct {
 	isOnboarding     bool
 	needsProjectInit bool
 	needsAPIKey      bool
+	showingOAuth     bool
 	selectedNo       bool
 
 	listHeight    int
@@ -73,6 +73,8 @@ type splashCmp struct {
 	selectedModel *models.ModelOption
 	isAPIKeyValid bool
 	apiKeyValue   string
+
+	oauthScreen *anthropicOAuthScreen
 }
 
 func New() Splash {
@@ -133,6 +135,9 @@ func (s *splashCmp) SetSize(width int, height int) tea.Cmd {
 	s.listHeight = s.height - lipgloss.Height(s.logoRendered) - (SplashScreenPaddingY * 2) - s.logoGap() - 2
 	listWidth := min(60, width)
 	s.apiKeyInput.SetWidth(width - 2)
+	if s.oauthScreen != nil {
+		s.oauthScreen.SetWidth(width - 2)
+	}
 	return s.modelList.SetSize(listWidth, s.listHeight)
 }
 
@@ -155,6 +160,21 @@ func (s *splashCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return s, s.saveAPIKeyAndContinue(s.apiKeyValue)
 		}
 	case tea.KeyPressMsg:
+		// If showing OAuth, route keys to OAuth screen except Back
+		if s.showingOAuth {
+			if key.Matches(msg, s.keyMap.Back) {
+				// Go back to model selection
+				s.showingOAuth = false
+				s.oauthScreen = nil
+				return s, nil
+			}
+			if s.oauthScreen != nil {
+				u, cmd := s.oauthScreen.Update(msg)
+				s.oauthScreen = u.(*anthropicOAuthScreen)
+				return s, cmd
+			}
+			return s, nil
+		}
 		switch {
 		case key.Matches(msg, s.keyMap.Back):
 			if s.isAPIKeyValid {
@@ -180,9 +200,13 @@ func (s *splashCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				// If Anthropic Max (Sonnet/Opus) and provider not configured, start OAuth dialog instead of API key
 				if isAnthropicMaxModel(selectedItem) && !s.isProviderConfigured(string(selectedItem.Provider.ID)) {
-					return s, util.CmdHandler(
-						dialogs.OpenDialogMsg{Model: models.NewAnthropicOAuthDialogCmp(selectedItem, config.SelectedModelTypeLarge)},
-					)
+					s.selectedModel = selectedItem
+					s.oauthScreen = newAnthropicOAuthScreen(selectedItem, config.SelectedModelTypeLarge)
+					s.showingOAuth = true
+					if s.width > 0 {
+						s.oauthScreen.SetWidth(s.width - 2)
+					}
+					return s, s.oauthScreen.Init()
 				}
 				if s.isProviderConfigured(string(selectedItem.Provider.ID)) {
 					cmd := s.setPreferredModel(*selectedItem)
@@ -203,7 +227,12 @@ func (s *splashCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					s.isAPIKeyValid = false
 					s.apiKeyValue = ""
 					s.apiKeyInput.Reset()
-					return s, util.CmdHandler(dialogs.OpenDialogMsg{Model: models.NewAnthropicOAuthDialogCmp(s.selectedModel, config.SelectedModelTypeLarge)})
+					s.oauthScreen = newAnthropicOAuthScreen(s.selectedModel, config.SelectedModelTypeLarge)
+					s.showingOAuth = true
+					if s.width > 0 {
+						s.oauthScreen.SetWidth(s.width - 2)
+					}
+					return s, s.oauthScreen.Init()
 				}
 				s.apiKeyValue = strings.TrimSpace(s.apiKeyInput.Value())
 				if s.apiKeyValue == "" {
@@ -287,6 +316,14 @@ func (s *splashCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return s, s.initializeProject()
 			}
 		default:
+			if s.showingOAuth {
+				if s.oauthScreen != nil {
+					u, cmd := s.oauthScreen.Update(msg)
+					s.oauthScreen = u.(*anthropicOAuthScreen)
+					return s, cmd
+				}
+				return s, nil
+			}
 			if s.needsAPIKey {
 				u, cmd := s.apiKeyInput.Update(msg)
 				s.apiKeyInput = u.(*models.APIKeyInput)
@@ -298,6 +335,14 @@ func (s *splashCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case tea.PasteMsg:
+		if s.showingOAuth {
+			if s.oauthScreen != nil {
+				u, cmd := s.oauthScreen.Update(msg)
+				s.oauthScreen = u.(*anthropicOAuthScreen)
+				return s, cmd
+			}
+			return s, nil
+		}
 		if s.needsAPIKey {
 			u, cmd := s.apiKeyInput.Update(msg)
 			s.apiKeyInput = u.(*models.APIKeyInput)
@@ -311,6 +356,26 @@ func (s *splashCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		u, cmd := s.apiKeyInput.Update(msg)
 		s.apiKeyInput = u.(*models.APIKeyInput)
 		return s, cmd
+	case oauthErrorMsg:
+		// Ensure the nested OAuth screen updates its UI (clears exchanging state, shows error)
+		if s.showingOAuth && s.oauthScreen != nil {
+			u, cmd := s.oauthScreen.Update(msg)
+			s.oauthScreen = u.(*anthropicOAuthScreen)
+			return s, cmd
+		}
+		return s, nil
+	case oauthSuccessMsg:
+		// finalize onboarding: select model and close onboarding
+		selected := config.SelectedModel{Model: msg.modelID, Provider: msg.providerID}
+		s.showingOAuth = false
+		s.oauthScreen = nil
+		s.isOnboarding = false
+		s.needsAPIKey = false
+		s.selectedModel = nil
+		return s, tea.Sequence(
+			util.CmdHandler(models.ModelSelectedMsg{Model: selected, ModelType: msg.modelType}),
+			util.CmdHandler(OnboardingCompleteMsg{}),
+		)
 	}
 	return s, nil
 }
@@ -464,6 +529,22 @@ func (s *splashCmp) View() string {
 			s.logoRendered,
 			apiKeySelector,
 		)
+	} else if s.showingOAuth {
+		remainingHeight := s.height - (SplashScreenPaddingY * 2)
+		oauthView := ""
+		if s.oauthScreen != nil {
+			oauthView = s.oauthScreen.View()
+		}
+		oauthSelector := t.S().Base.AlignVertical(lipgloss.Bottom).Height(remainingHeight).Render(
+			lipgloss.JoinVertical(
+				lipgloss.Left,
+				t.S().Base.PaddingLeft(1).Render(oauthView),
+			),
+		)
+		content = lipgloss.JoinVertical(
+			lipgloss.Left,
+			oauthSelector,
+		)
 	} else if s.isOnboarding {
 		modelListView := s.modelList.View()
 		remainingHeight := s.height - lipgloss.Height(s.logoRendered) - (SplashScreenPaddingY * 2)
@@ -549,6 +630,13 @@ func (s *splashCmp) Cursor() *tea.Cursor {
 		if cursor != nil {
 			return s.moveCursor(cursor)
 		}
+	} else if s.showingOAuth {
+		if s.oauthScreen != nil {
+			cursor := s.oauthScreen.Cursor()
+			if cursor != nil {
+				return s.moveCursor(cursor)
+			}
+		}
 	} else if s.isOnboarding {
 		cursor := s.modelList.Cursor()
 		if cursor != nil {
@@ -621,6 +709,17 @@ func (s *splashCmp) moveCursor(cursor *tea.Cursor) *tea.Cursor {
 		offset := baseOffset + remainingHeight
 		cursor.Y += offset
 		cursor.X = cursor.X + 1
+	} else if s.showingOAuth {
+		// In OAuth full-screen mode we don't render logo or info section.
+		oauthHeight := 0
+		if s.oauthScreen != nil {
+			oauthHeight = lipgloss.Height(s.oauthScreen.View())
+		}
+		baseOffset := SplashScreenPaddingY
+		remainingHeight := s.height - baseOffset - oauthHeight - SplashScreenPaddingY
+		offset := baseOffset + remainingHeight
+		cursor.Y += offset
+		cursor.X = cursor.X + 1
 	} else if s.isOnboarding {
 		offset := logoHeight + SplashScreenPaddingY + s.logoGap() + 2
 		cursor.Y += offset
@@ -642,6 +741,10 @@ func (s *splashCmp) Bindings() []key.Binding {
 	if s.needsAPIKey {
 		return []key.Binding{
 			s.keyMap.Select,
+			s.keyMap.Back,
+		}
+	} else if s.showingOAuth {
+		return []key.Binding{
 			s.keyMap.Back,
 		}
 	} else if s.isOnboarding {

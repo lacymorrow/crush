@@ -489,6 +489,26 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 			return p, tea.Batch(cmds...)
 		}
+	default:
+		// Forward any unhandled messages to the currently focused pane so
+		// component-specific messages (like OAuth success/error) are handled.
+		switch p.focusedPane {
+		case PanelTypeSplash:
+			u, cmd := p.splash.Update(msg)
+			p.splash = u.(splash.Splash)
+			cmds = append(cmds, cmd)
+			return p, tea.Batch(cmds...)
+		case PanelTypeEditor:
+			u, cmd := p.editor.Update(msg)
+			p.editor = u.(editor.Editor)
+			cmds = append(cmds, cmd)
+			return p, tea.Batch(cmds...)
+		case PanelTypeChat:
+			u, cmd := p.chat.Update(msg)
+			p.chat = u.(chat.MessageListCmp)
+			cmds = append(cmds, cmd)
+			return p, tea.Batch(cmds...)
+		}
 	}
 	return p, tea.Batch(cmds...)
 }

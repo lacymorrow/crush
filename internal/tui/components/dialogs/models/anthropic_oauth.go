@@ -172,7 +172,6 @@ func (d *anthropicOAuthDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (d *anthropicOAuthDialog) exchangeCmd(code string) tea.Cmd {
-	providerID := string(d.provider.ID)
 	modelID := d.model.ID
 	modelType := d.modelType
 	return func() tea.Msg {
@@ -186,43 +185,9 @@ func (d *anthropicOAuthDialog) exchangeCmd(code string) tea.Cmd {
 		if err := auth.Set("anthropic", info); err != nil {
 			return util.InfoMsg{Type: util.InfoTypeError, Msg: fmt.Sprintf("failed to persist OAuth tokens: %v", err)}
 		}
-		// Configure provider API key as Bearer token for synthetic provider
-		token := info.Access
-		if !strings.HasPrefix(token, "Bearer ") {
-			token = "Bearer " + token
-		}
-		cfg := config.Get()
-		// Build a provider config for 'anthropic-max' mirroring real Anthropic
-		providers, _ := config.Providers()
-		var realAnth *catwalk.Provider
-		for _, p := range providers {
-			if p.ID == catwalk.InferenceProviderAnthropic {
-				realAnth = &p
-				break
-			}
-		}
-		pc := config.ProviderConfig{
-			ID:           providerID,
-			Name:         "Anthropic Max",
-			BaseURL:      "",
-			Type:         catwalk.TypeAnthropic,
-			APIKey:       token,
-			Disable:      false,
-			ExtraHeaders: map[string]string{},
-			ExtraBody:    map[string]any{},
-			ExtraParams:  map[string]string{},
-			Models:       nil,
-		}
-		if realAnth != nil {
-			pc.BaseURL = realAnth.APIEndpoint
-			pc.Type = realAnth.Type
-			pc.Models = realAnth.Models
-		}
-		// Persist and set in-memory
-		_ = cfg.SetConfigField("providers."+providerID, pc)
-		cfg.Providers.Set(providerID, pc)
-
-		return oauthSuccessMsg{providerID: providerID, modelID: modelID, modelType: modelType}
+		// Tokens are stored under "anthropic". Use the standard provider for API calls.
+		// We only used the synthetic provider to trigger OAuth UI.
+		return oauthSuccessMsg{providerID: string(catwalk.InferenceProviderAnthropic), modelID: modelID, modelType: modelType}
 	}
 }
 

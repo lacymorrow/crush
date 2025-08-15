@@ -282,16 +282,30 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, a.handleWindowResize(a.wWidth, a.wHeight)
 	// Model Switch
 	case models.ModelSelectedMsg:
-		// If agent isn't initialized yet (e.g., first-time config via OAuth), initialize it
+		// Ensure agent config exists (first-time setup after provider auth)
+		cfg := config.Get()
+		if cfg.Agents == nil || cfg.Agents["coder"].ID == "" {
+			cfg.SetupAgents()
+			// sync into app's config
+			a.app.Config().Agents = cfg.Agents
+		}
+		// Persist the newly selected model before initializing/updating the agent
+		// so provider resolution (e.g., synthetic 'anthropic-max') is available.
+		cfg.UpdatePreferredModel(msg.ModelType, msg.Model)
+		// If agent isn't initialized yet (e.g., first-time config via OAuth), initialize it now
 		if a.app.CoderAgent == nil {
 			if err := a.app.InitCoderAgent(); err != nil {
-				return a, util.ReportError(fmt.Errorf("failed to initialize agent after model selection: %v", err))
+				// Retry once after forcing agent setup
+				cfg.SetupAgents()
+				a.app.Config().Agents = cfg.Agents
+				if err2 := a.app.InitCoderAgent(); err2 != nil {
+					return a, util.ReportError(fmt.Errorf("failed to initialize agent after model selection: %v", err2))
+				}
 			}
 		}
 		if a.app.CoderAgent != nil && a.app.CoderAgent.IsBusy() {
 			return a, util.ReportWarn("Agent is busy, please wait...")
 		}
-		config.Get().UpdatePreferredModel(msg.ModelType, msg.Model)
 		// Update the agent with the new model/provider configuration
 		if err := a.app.UpdateAgentModel(); err != nil {
 			return a, util.ReportError(fmt.Errorf("model changed to %s but failed to update agent: %v", msg.Model.Model, err))

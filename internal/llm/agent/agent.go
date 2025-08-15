@@ -141,23 +141,23 @@ func NewAgent(
 		smallModelProviderCfg = providerCfg
 	} else {
 		smallModelProviderCfg = cfg.GetProviderForModel(config.SelectedModelTypeSmall)
-
-		if smallModelProviderCfg.ID == "" {
-			return nil, fmt.Errorf("provider %s not found in config", smallModelCfg.Provider)
-		}
 	}
+
+	// Create title provider only if small model and provider are resolvable.
+	var titleProvider provider.Provider
 	smallModel := cfg.GetModelByType(config.SelectedModelTypeSmall)
-	if smallModel.ID == "" {
-		return nil, fmt.Errorf("model %s not found in provider %s", smallModelCfg.Model, smallModelProviderCfg.ID)
-	}
-
-	titleOpts := []provider.ProviderClientOption{
-		provider.WithModel(config.SelectedModelTypeSmall),
-		provider.WithSystemMessage(prompt.GetPrompt(prompt.PromptTitle, smallModelProviderCfg.ID)),
-	}
-	titleProvider, err := provider.NewProvider(*smallModelProviderCfg, titleOpts...)
-	if err != nil {
-		return nil, err
+	if smallModelProviderCfg != nil && smallModel != nil && smallModel.ID != "" {
+		titleOpts := []provider.ProviderClientOption{
+			provider.WithModel(config.SelectedModelTypeSmall),
+			provider.WithSystemMessage(prompt.GetPrompt(prompt.PromptTitle, smallModelProviderCfg.ID)),
+		}
+		tp, err := provider.NewProvider(*smallModelProviderCfg, titleOpts...)
+		if err != nil {
+			return nil, err
+		}
+		titleProvider = tp
+	} else {
+		slog.Warn("Skipping title provider initialization: small model/provider not configured")
 	}
 
 	summarizeOpts := []provider.ProviderClientOption{
