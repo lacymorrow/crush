@@ -283,6 +283,7 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Model Switch
 	case models.ModelSelectedMsg:
 		// Ensure agent config exists (first-time setup after provider auth)
+		wasConfigured := a.isConfigured
 		cfg := config.Get()
 		if cfg.Agents == nil || cfg.Agents["coder"].ID == "" {
 			cfg.SetupAgents()
@@ -292,6 +293,44 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Persist the newly selected model before initializing/updating the agent
 		// so provider resolution (e.g., synthetic 'anthropic-max') is available.
 		cfg.UpdatePreferredModel(msg.ModelType, msg.Model)
+		// Sanity-check connectivity for the selected provider to surface actionable errors early
+		if pc := cfg.GetProviderForModel(msg.ModelType); pc != nil {
+			if err := pc.TestConnection(cfg.Resolver()); err != nil {
+				return a, util.ReportError(fmt.Errorf("failed provider connectivity for %s: %w", pc.ID, err))
+			}
+		}
+		// Ensure the selected provider exists in config. If missing (e.g., added via OAuth), seed from known providers.
+		selectedProviderID := msg.Model.Provider
+		if _, ok := cfg.Providers.Get(selectedProviderID); !ok {
+			if known, err := config.Providers(); err == nil {
+				for _, kp := range known {
+					if string(kp.ID) == selectedProviderID {
+						pc := config.ProviderConfig{
+							ID:           selectedProviderID,
+							Name:         kp.Name,
+							BaseURL:      kp.APIEndpoint,
+							Type:         kp.Type,
+							ExtraHeaders: map[string]string{},
+							Models:       kp.Models,
+						}
+						cfg.Providers.Set(selectedProviderID, pc)
+						_ = cfg.SetConfigField("providers."+selectedProviderID, pc)
+						break
+					}
+				}
+			}
+		}
+		// Ensure small model provider is valid; if missing/invalid, default to the selected provider
+		small := cfg.Models[config.SelectedModelTypeSmall]
+		if small.Provider == "" {
+			cfg.Models[config.SelectedModelTypeSmall] = msg.Model
+			_ = cfg.SetConfigField("models.small", msg.Model)
+		} else {
+			if _, ok := cfg.Providers.Get(small.Provider); !ok {
+				cfg.Models[config.SelectedModelTypeSmall] = msg.Model
+				_ = cfg.SetConfigField("models.small", msg.Model)
+			}
+		}
 		// If agent isn't initialized yet (e.g., first-time config via OAuth), initialize it now
 		if a.app.CoderAgent == nil {
 			if err := a.app.InitCoderAgent(); err != nil {
@@ -315,7 +354,12 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.ModelType == config.SelectedModelTypeSmall {
 			modelTypeName = "small"
 		}
-		return a, util.ReportInfo(fmt.Sprintf("%s model changed to %s", modelTypeName, msg.Model.Model))
+		infoCmd := util.ReportInfo(fmt.Sprintf("%s model changed to %s", modelTypeName, msg.Model.Model))
+		// If this is the first configuration flow (onboarding), notify splash to complete
+		if !wasConfigured {
+			return a, tea.Batch(infoCmd, util.CmdHandler(splash.OnboardingCompleteMsg{}))
+		}
+		return a, infoCmd
 
 	// File Picker
 	case commands.OpenFilePickerMsg:

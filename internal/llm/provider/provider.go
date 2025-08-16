@@ -13,7 +13,7 @@ import (
 
 type EventType string
 
-const maxRetries = 8
+const maxRetries = 1
 
 // computeBackoffMs returns an exponential backoff in milliseconds with jitter.
 // Base of 2000ms doubling each attempt, with 20% jitter.

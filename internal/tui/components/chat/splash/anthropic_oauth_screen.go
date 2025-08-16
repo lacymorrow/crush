@@ -2,7 +2,9 @@ package splash
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
@@ -172,31 +174,87 @@ func (s *anthropicOAuthScreen) exchangeCmd(code string) tea.Cmd {
 		if err := auth.Set("anthropic", info); err != nil {
 			return oauthErrorMsg{err: fmt.Sprintf("failed to persist OAuth tokens: %v", err)}
 		}
-		// Configure provider API key as Bearer token for Anthropics
-		token := info.Access
-		if !strings.HasPrefix(token, "Bearer ") {
-			token = "Bearer " + token
+		// Attempt to create a real API key using the OAuth access token.
+		accessToken := info.Access
+		apiKey := ""
+		{
+			req, _ := http.NewRequest("POST", "https://api.anthropic.com/api/oauth/claude_cli/create_api_key", strings.NewReader(""))
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Accept", "application/json, text/plain, */*")
+			httpClient := &http.Client{Timeout: 30 * time.Second}
+			resp, err := httpClient.Do(req)
+			if err == nil && resp != nil {
+				defer resp.Body.Close()
+				if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+					var out struct {
+						RawKey string `json:"raw_key"`
+					}
+					if derr := json.NewDecoder(resp.Body).Decode(&out); derr == nil && out.RawKey != "" {
+						apiKey = out.RawKey
+					}
+				}
+			}
+		}
+
+		// Configure provider with API key if created; otherwise fall back to Bearer token
+		finalAPIValue := ""
+		if apiKey != "" {
+			finalAPIValue = apiKey
+		} else {
+			finalAPIValue = accessToken
+			if !strings.HasPrefix(finalAPIValue, "Bearer ") {
+				finalAPIValue = "Bearer " + finalAPIValue
+			}
 		}
 		cfg := config.Get()
-		pc := config.ProviderConfig{
-			ID:           providerID,
-			Name:         "Anthropic",
-			BaseURL:      "",
-			Type:         catwalk.TypeAnthropic,
-			APIKey:       token,
-			Disable:      false,
-			ExtraHeaders: map[string]string{},
-			ExtraBody:    map[string]any{},
-			ExtraParams:  map[string]string{},
-			Models:       nil,
+		pc, ok := cfg.Providers.Get(providerID)
+		if !ok {
+			// Seed from known providers so models are populated for agent/provider initialization
+			known, _ := config.Providers()
+			for _, kp := range known {
+				if string(kp.ID) == providerID {
+					pc = config.ProviderConfig{
+						ID:           providerID,
+						Name:         kp.Name,
+						BaseURL:      kp.APIEndpoint,
+						Type:         kp.Type,
+						ExtraHeaders: map[string]string{},
+						Models:       kp.Models,
+					}
+					break
+				}
+			}
+			if pc.ID == "" {
+				pc = config.ProviderConfig{ID: providerID, Name: "Anthropic", Type: catwalk.TypeAnthropic, BaseURL: config.DefaultAnthropicBaseURL, ExtraHeaders: map[string]string{}}
+			}
+		} else if len(pc.Models) == 0 {
+			// Backfill models if provider exists but models are empty
+			known, _ := config.Providers()
+			for _, kp := range known {
+				if string(kp.ID) == providerID {
+					pc.Models = kp.Models
+					if pc.BaseURL == "" {
+						pc.BaseURL = kp.APIEndpoint
+					}
+					if pc.Type == "" {
+						pc.Type = kp.Type
+					}
+					break
+				}
+			}
 		}
-		if pc.BaseURL == "" {
-			pc.BaseURL = config.DefaultAnthropicBaseURL
+		if pc.ExtraHeaders == nil {
+			pc.ExtraHeaders = map[string]string{}
 		}
+		pc.APIKey = finalAPIValue
+		pc.Disable = false
 		pc.ExtraHeaders[config.HeaderAnthropicVersion] = config.DefaultAnthropicAPIVer
-		_ = cfg.SetConfigField("providers."+providerID, pc)
 		cfg.Providers.Set(providerID, pc)
+		_ = cfg.SetConfigField("providers."+providerID, pc)
 
+		// Ensure the selected model references the real provider (not synthetic 'anthropic-max')
+		// so downstream components can resolve provider config correctly.
 		return oauthSuccessMsg{providerID: providerID, modelID: modelID, modelType: modelType}
 	}
 }

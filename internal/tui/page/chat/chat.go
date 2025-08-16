@@ -407,6 +407,9 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		p.isOnboarding = false
 		p.isProjectInit = false
 		p.focusedPane = PanelTypeEditor
+		// Ensure editor gains focus so Enter submits input immediately
+		p.chat.Blur()
+		p.editor.Focus()
 		return p, p.SetSize(p.width, p.height)
 	case commands.NewSessionsMsg:
 		if p.app.CoderAgent.IsBusy() {

@@ -125,7 +125,7 @@ func (m *modelDialogCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			// For Anthropic Max (Sonnet/Opus), force OAuth dialog when provider isn't configured
-			if selectedItem != nil && isAnthropicMaxModel(selectedItem) && !m.isProviderConfigured(string(selectedItem.Provider.ID)) {
+			if selectedItem != nil && IsAnthropicMaxModel(selectedItem) && !m.isProviderConfigured(string(selectedItem.Provider.ID)) {
 				m.selectedModel = selectedItem
 				m.selectedModelType = modelType
 				// ensure API key mode is cleared
@@ -345,8 +345,8 @@ func (m *modelDialogCmp) ID() dialogs.DialogID {
 	return ModelsDialogID
 }
 
-// isAnthropicMaxModel returns true for Sonnet/Opus models under the Anthropic provider
-func isAnthropicMaxModel(opt *ModelOption) bool {
+// IsAnthropicMaxModel returns true for Sonnet/Opus models under the Anthropic provider
+func IsAnthropicMaxModel(opt *ModelOption) bool {
 	if opt == nil {
 		return false
 	}
