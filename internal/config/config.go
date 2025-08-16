@@ -607,6 +607,10 @@ func (c *ProviderConfig) TestConnection(resolver VariableResolver) error {
 	testURL := ""
 	headers := make(map[string]string)
 	apiKey, _ := resolver.ResolveValue(c.APIKey)
+	
+	// Note: OAuth tokens for anthropic-max might be expired, but we can't refresh here
+	// due to import cycle. The provider will handle refresh on actual API calls.
+	
 	switch c.Type {
 	case catwalk.TypeOpenAI:
 		baseURL, _ := resolver.ResolveValue(c.BaseURL)
@@ -624,6 +628,8 @@ func (c *ProviderConfig) TestConnection(resolver VariableResolver) error {
 		// Support both X-Api-Key and Authorization: Bearer
 		if strings.HasPrefix(strings.TrimSpace(apiKey), BearerPrefix) {
 			headers[HeaderAuthorization] = apiKey
+			// Add OAuth beta header for Bearer tokens
+			headers["anthropic-beta"] = "oauth-2025-04-20"
 		} else {
 			headers[HeaderXAPIKey] = apiKey
 		}

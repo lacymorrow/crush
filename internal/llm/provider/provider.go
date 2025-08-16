@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/charmbracelet/catwalk/pkg/catwalk"
 
@@ -177,7 +178,13 @@ func NewProvider(cfg config.ProviderConfig, opts ...ProviderClientOption) (Provi
 		extraParams:        cfg.ExtraParams,
 		systemPromptPrefix: cfg.SystemPromptPrefix,
 		model: func(tp config.SelectedModelType) catwalk.Model {
-			return *config.Get().GetModelByType(tp)
+			m := config.Get().GetModelByType(tp)
+			if m == nil {
+				slog.Error("Failed to get model by type", "model_type", tp)
+				return catwalk.Model{ID: "claude-3-5-sonnet-20241022"} // Fallback
+			}
+			slog.Info("Model resolved for provider", "model_id", m.ID, "model_name", m.Name, "model_type", tp)
+			return *m
 		},
 	}
 	for _, o := range opts {

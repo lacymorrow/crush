@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -296,7 +297,13 @@ func (a *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Sanity-check connectivity for the selected provider to surface actionable errors early
 		if pc := cfg.GetProviderForModel(msg.ModelType); pc != nil {
 			if err := pc.TestConnection(cfg.Resolver()); err != nil {
-				return a, util.ReportError(fmt.Errorf("failed provider connectivity for %s: %w", pc.ID, err))
+				// For OAuth providers, the error might be due to expired token which will be refreshed on use
+				if pc.ID == "anthropic-max" && strings.Contains(err.Error(), "401") {
+					// Log warning but continue - token will be refreshed on actual use
+					slog.Warn("OAuth token may be expired, will refresh on use", "provider", pc.ID)
+				} else {
+					return a, util.ReportError(fmt.Errorf("failed provider connectivity for %s: %w", pc.ID, err))
+				}
 			}
 		}
 		// Ensure the selected provider exists in config. If missing (e.g., added via OAuth), seed from known providers.

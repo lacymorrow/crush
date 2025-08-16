@@ -159,8 +159,8 @@ func (s *anthropicOAuthScreen) openBrowserCmd() tea.Cmd {
 }
 
 func (s *anthropicOAuthScreen) exchangeCmd(code string) tea.Cmd {
-	// Always target the real Anthropic provider after OAuth
-	providerID := string(catwalk.InferenceProviderAnthropic)
+	// Use the provider ID from the selected option (anthropic-max for OAuth)
+	providerID := string(s.provider.ID)
 	modelID := s.model.ID
 	modelType := s.modelType
 	return func() tea.Msg {
@@ -210,29 +210,52 @@ func (s *anthropicOAuthScreen) exchangeCmd(code string) tea.Cmd {
 		cfg := config.Get()
 		pc, ok := cfg.Providers.Get(providerID)
 		if !ok {
-			// Seed from known providers so models are populated for agent/provider initialization
-			known, _ := config.Providers()
-			for _, kp := range known {
-				if string(kp.ID) == providerID {
-					pc = config.ProviderConfig{
-						ID:           providerID,
-						Name:         kp.Name,
-						BaseURL:      kp.APIEndpoint,
-						Type:         kp.Type,
-						ExtraHeaders: map[string]string{},
-						Models:       kp.Models,
+			// For anthropic-max, copy from the base anthropic provider
+			if providerID == "anthropic-max" {
+				known, _ := config.Providers()
+				for _, kp := range known {
+					if string(kp.ID) == string(catwalk.InferenceProviderAnthropic) {
+						pc = config.ProviderConfig{
+							ID:           providerID,
+							Name:         "Anthropic",  // Use "Anthropic" to avoid any API issues with "Anthropic Max"
+							BaseURL:      kp.APIEndpoint,
+							Type:         kp.Type,
+							ExtraHeaders: map[string]string{},
+							Models:       kp.Models,
+						}
+						break
 					}
-					break
+				}
+			} else {
+				// Seed from known providers so models are populated for agent/provider initialization
+				known, _ := config.Providers()
+				for _, kp := range known {
+					if string(kp.ID) == providerID {
+						pc = config.ProviderConfig{
+							ID:           providerID,
+							Name:         kp.Name,
+							BaseURL:      kp.APIEndpoint,
+							Type:         kp.Type,
+							ExtraHeaders: map[string]string{},
+							Models:       kp.Models,
+						}
+						break
+					}
 				}
 			}
 			if pc.ID == "" {
 				pc = config.ProviderConfig{ID: providerID, Name: "Anthropic", Type: catwalk.TypeAnthropic, BaseURL: config.DefaultAnthropicBaseURL, ExtraHeaders: map[string]string{}}
 			}
 		} else if len(pc.Models) == 0 {
+			// For anthropic-max, copy models from the base anthropic provider
+			searchID := providerID
+			if providerID == "anthropic-max" {
+				searchID = string(catwalk.InferenceProviderAnthropic)
+			}
 			// Backfill models if provider exists but models are empty
 			known, _ := config.Providers()
 			for _, kp := range known {
-				if string(kp.ID) == providerID {
+				if string(kp.ID) == searchID {
 					pc.Models = kp.Models
 					if pc.BaseURL == "" {
 						pc.BaseURL = kp.APIEndpoint

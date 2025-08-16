@@ -70,14 +70,22 @@ func createAnthropicClient(opts providerClientOptions, tp AnthropicClientType) a
 
 	if opts.apiKey != "" && !hasBearerAuth {
 		if isBearerToken {
-			slog.Debug("API key starts with 'Bearer ', using as Authorization header")
+			slog.Info("Using OAuth Bearer token for Anthropic", "token_prefix", opts.apiKey[:min(20, len(opts.apiKey))]+"...")
+			// Pass empty API key to prevent SDK from setting X-Api-Key header
+			anthropicClientOptions = append(anthropicClientOptions, option.WithAPIKey(""))
 			anthropicClientOptions = append(anthropicClientOptions, option.WithHeader(config.HeaderAuthorization, opts.apiKey))
+			// Add OAuth beta header
+			anthropicClientOptions = append(anthropicClientOptions, option.WithHeaderAdd("anthropic-beta", "oauth-2025-04-20"))
 		} else {
 			// Use standard X-Api-Key header
 			anthropicClientOptions = append(anthropicClientOptions, option.WithAPIKey(opts.apiKey))
 		}
 	} else if hasBearerAuth {
 		slog.Debug("Skipping X-Api-Key header because Authorization header is provided")
+		// Pass empty API key to prevent SDK from setting X-Api-Key header
+		anthropicClientOptions = append(anthropicClientOptions, option.WithAPIKey(""))
+		// Add OAuth beta header
+		anthropicClientOptions = append(anthropicClientOptions, option.WithHeaderAdd("anthropic-beta", "oauth-2025-04-20"))
 	}
 
 	if config.Get().Options.Debug {
@@ -222,6 +230,7 @@ func (a *anthropicClient) isThinkingEnabled() bool {
 
 func (a *anthropicClient) preparedMessages(messages []anthropic.MessageParam, tools []anthropic.ToolUnionParam) anthropic.MessageNewParams {
 	model := a.providerOptions.model(a.providerOptions.modelType)
+	slog.Info("Retrieved model for API call", "model_id", model.ID, "model_name", model.Name, "model_type", a.providerOptions.modelType)
 	var thinkingParam anthropic.ThinkingConfigParamUnion
 	cfg := config.Get()
 	modelConfig := cfg.Models[config.SelectedModelTypeLarge]
@@ -264,6 +273,7 @@ func (a *anthropicClient) preparedMessages(messages []anthropic.MessageParam, to
 		},
 	})
 
+	slog.Info("Preparing Anthropic API request", "model_id", model.ID, "provider_id", a.providerOptions.config.ID)
 	return anthropic.MessageNewParams{
 		Model:       anthropic.Model(model.ID),
 		MaxTokens:   maxTokens,
