@@ -141,6 +141,15 @@ func (s *splashCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return s, s.SetSize(msg.Width, msg.Height)
+	case models.ModelSelectedMsg:
+		// Handle model selection from OAuth dialog
+		if s.isOnboarding {
+			// OAuth completed successfully, close onboarding
+			s.isOnboarding = false
+			// The main TUI will handle setting up the model and sending OnboardingCompleteMsg
+			return s, nil
+		}
+		return s, nil
 	case models.APIKeyStateChangeMsg:
 		u, cmd := s.apiKeyInput.Update(msg)
 		s.apiKeyInput = u.(*models.APIKeyInput)

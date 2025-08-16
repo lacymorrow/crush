@@ -74,8 +74,8 @@ func createAnthropicClient(opts providerClientOptions, tp AnthropicClientType) a
 			// Pass empty API key to prevent SDK from setting X-Api-Key header
 			anthropicClientOptions = append(anthropicClientOptions, option.WithAPIKey(""))
 			anthropicClientOptions = append(anthropicClientOptions, option.WithHeader(config.HeaderAuthorization, opts.apiKey))
-			// Add OAuth beta header
-			anthropicClientOptions = append(anthropicClientOptions, option.WithHeaderAdd("anthropic-beta", "oauth-2025-04-20"))
+			// Add OAuth beta headers for Claude Code compatibility
+			anthropicClientOptions = append(anthropicClientOptions, option.WithHeaderAdd("anthropic-beta", "oauth-2025-04-20,claude-code-20250219,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14"))
 		} else {
 			// Use standard X-Api-Key header
 			anthropicClientOptions = append(anthropicClientOptions, option.WithAPIKey(opts.apiKey))
@@ -84,8 +84,8 @@ func createAnthropicClient(opts providerClientOptions, tp AnthropicClientType) a
 		slog.Debug("Skipping X-Api-Key header because Authorization header is provided")
 		// Pass empty API key to prevent SDK from setting X-Api-Key header
 		anthropicClientOptions = append(anthropicClientOptions, option.WithAPIKey(""))
-		// Add OAuth beta header
-		anthropicClientOptions = append(anthropicClientOptions, option.WithHeaderAdd("anthropic-beta", "oauth-2025-04-20"))
+		// Add OAuth beta headers for Claude Code compatibility
+		anthropicClientOptions = append(anthropicClientOptions, option.WithHeaderAdd("anthropic-beta", "oauth-2025-04-20,claude-code-20250219,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14"))
 	}
 
 	if config.Get().Options.Debug {
@@ -293,9 +293,8 @@ func (a *anthropicClient) send(ctx context.Context, messages []message.Message, 
 		preparedMessages := a.preparedMessages(a.convertMessages(messages), a.convertTools(tools))
 
 		var opts []option.RequestOption
-		if a.isThinkingEnabled() {
-			opts = append(opts, option.WithHeaderAdd("anthropic-beta", "interleaved-thinking-2025-05-14"))
-		}
+		// Always include all beta headers for OAuth/Claude Code compatibility
+		opts = append(opts, option.WithHeaderAdd("anthropic-beta", "oauth-2025-04-20,claude-code-20250219,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14"))
 		anthropicResponse, err := a.client.Messages.New(
 			ctx,
 			preparedMessages,
@@ -345,9 +344,8 @@ func (a *anthropicClient) stream(ctx context.Context, messages []message.Message
 			preparedMessages := a.preparedMessages(a.convertMessages(messages), a.convertTools(tools))
 
 			var opts []option.RequestOption
-			if a.isThinkingEnabled() {
-				opts = append(opts, option.WithHeaderAdd("anthropic-beta", "interleaved-thinking-2025-05-14"))
-			}
+			// Always include all beta headers for OAuth/Claude Code compatibility
+			opts = append(opts, option.WithHeaderAdd("anthropic-beta", "oauth-2025-04-20,claude-code-20250219,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14"))
 
 			anthropicStream := a.client.Messages.NewStreaming(
 				ctx,
